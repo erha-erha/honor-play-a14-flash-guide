@@ -1,0 +1,22 @@
+# Binary firmware images, archives, extracted tools, logs, and local artifacts
+*.img
+*.img.xz
+*.xz
+*.gz
+*.zip
+*.apk
+*.APP
+*.htm
+*.html
+*.log
+*.lnk
+*.png
+*.jpg
+*.xml
+*.yaml
+*.yml
+google_usb_driver/
+shrp_charlotte/
+shrp_charlotte_ext/
+.DS_Store
+Thumbs.db
