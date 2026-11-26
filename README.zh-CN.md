@@ -4,33 +4,45 @@
 
 > **目标设备**：荣耀 Play 国行高配版（型号 `COR-AL10`，设备代号 `HWCOR`，SoC：海思麒麟 970，`arm64-v8a`，UFS 存储，`system = /dev/block/sdd62 / 2.97 GB (2,969,567,232 B)`，`userdata = /dev/block/sdd66 / 112 GB (120,586,240,000 B)`）  
 > **起始状态**：Bootloader 已解锁（`verifiedbootstate=orange`），原厂 EMUI `9.1.0.350(C00E440R1P2)`（`Linux 4.9.148`，VNDK 28，`/` 与 `/vendor` 均为 EROFS），`recovery_ramdisk` 内已刷 Magisk `27.0`，`kernel` 为带 [212 字节 SELinux 解锁补丁](https://github.com/erha-erha/honor-play-emui9.1-350-selinux-kernel) 的原厂 `9.1.0.350` 内核（开机默认 Enforcing）。  
-> **最终成果**：成功刷入 **Android 14**（`LeaOS 21.0` Google 版 / LineageOS 21 pre-QPR2，`UQ1A.240205.004`，EROFS）+ 麒麟 970 同平台 `SHRP-Reborn v3.2 charlotte` Recovery + 保留原厂 `9.1.0.350` 内核（无需另编 A14 内核）—— **90 秒直接点亮进桌面**，`/data` 112 GB 挂载正常，有线 ADB 开机即用。
+> **最终成果**：成功刷入 **Android 14**（`LeaOS 21.0` Google 版 / LineageOS 21 pre-QPR2，`UQ1A.240205.004`，EROFS）+ 麒麟 970 同平台 `SHRP-Reborn v3.2 charlotte` Recovery + 保留原厂 `9.1.0.350` 内核（无需另编 A14 内核）—— **90 秒直接点亮进桌面**，并完成常驻 **`Magisk v30.7`**、开机自启 **3 GiB LZ4 ZRAM**、**iOS 式运行态真墓碑（`LSPosed v1.11.0 + Frozen 8.3.0`）**、**`RebootNya` 免按键软重启** 及 **麒麟 970 + Mali-G72 60Hz 低延迟流畅度专项优化（`honorplay_smooth`）**。
 
 ---
 
 ## 目录
 
-- [1. 实测可用软件与镜像清单](#1-实测可用软件与镜像清单)
+- [1. 实测可用软件、模块与镜像清单](#1-实测可用软件模块与镜像清单)
 - [2. 阶段一：全分区备份、抢救原厂内核与还原纯净 Recovery](#2-阶段一全分区备份抢救原厂内核与还原纯净-recovery)
 - [3. 阶段二：进 Fastboot 与修复 Windows 11 `HI3650`（`libwdi`）驱动占坑](#3-阶段二进-fastboot-与修复-windows-11-hi3650libwdi驱动占坑)
 - [4. 阶段三：Fastboot 刷入 Android 14 与 `charlotte` 版 SHRP](#4-阶段三fastboot-刷入-android-14-与-charlotte-版-shrp)
 - [5. 阶段四：核心复盘——为什么卡在 LineageOS 三个转圈（EMUI 9.1 跨机型 F2FS 通病）](#5-阶段四核心复盘为什么卡在-lineageos-三个转圈emui-91-跨机型-f2fs-通病)
 - [6. 阶段五：在 SHRP 内正确重格 `/data` 与 90 秒开机验证](#6-阶段五在-shrp-内正确重格-data-与-90-秒开机验证)
-- [7. 开机后续事项与救砖回退方案](#7-开机后续事项与救砖回退方案)
-- [8. 踩坑速查表](#8-踩坑速查表)
+- [7. 阶段六：刷后深度优化（Magisk v30.7、3 GiB ZRAM、真墓碑与 60Hz 流畅度调优）](#7-阶段六刷后深度优化magisk-v3073-gib-zram真墓碑与-60hz-流畅度调优)
+- [8. 开机后续事项与救砖回退方案](#8-开机后续事项与救砖回退方案)
+- [9. 踩坑速查表](#9-踩坑速查表)
+- [10. 致谢、版权声明与原作者署名](#10-致谢版权声明与原作者署名)
 
 ---
 
-## 1. 实测可用软件与镜像清单
+## 1. 实测可用软件、模块与镜像清单
 
-> **高速镜像下载（GitHub Releases）**：如果 SourceForge 在你所在地区下载限速严重，可直接到本仓库 **[Releases (`v1.0-mirror`)](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/tag/v1.0-mirror)** 下载已校验镜像（含 `SHA256SUMS.txt` 与预解压好的 `recovery.img`）。
+> **高速镜像下载（GitHub Releases）**：
+> - **基础刷机包**：**[Releases (`v1.0-mirror`)](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/tag/v1.0-mirror)**（含 `LeaOS 21.0`、`SHRP charlotte`、USB 驱动与 `SHA256SUMS.txt`）。
+> - **Root / ZRAM / 真墓碑 / 流畅度优化包（仅限荣耀 Play / 麒麟 970）**：**[Releases (`v1.1-optimization`)](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/tag/v1.1-optimization)**（含本机专用 `honorplay_smooth`、`honorplay_zram3g`、`COR-AL10 9.1.0.350` Magisk v30.7 修补镜像，以及 GPLv3/Apache-2.0 开源上游工具镜像）。
+> - **⚠️ 机型严格隔离提示**：本仓库模块仅适用于 **荣耀 Play（`COR-AL10` / 麒麟 970 / Mali-G72 / 6GB 内存）**；**华为畅享 9 Plus（麒麟 710 / Mali-G51 / 4GB 内存）** 请前往独立仓库 [huawei-enjoy9plus-a14-flash-guide](https://github.com/erha-erha/huawei-enjoy9plus-a14-flash-guide)。两机专属模块均在 `customize.sh` 中内置了 `ro.hardware` 校验，防止误刷混用。
 
-| 用途 | 文件 / 工具 | 实测大小 | 目标分区 / 说明 | 公开来源与高速镜像 |
+| 用途 | 文件 / 工具 | 实测大小 | 目标分区 / 说明 | 原作者上游与高速镜像 |
 | :--- | :--- | :--- | :--- | :--- |
-| Android 14 ROM（带 GApps） | `LeaOS-21.0-20260118-iceows-google-pot.img.xz` → `.img` | 压缩包：`1,357,554,880` B<br>解压后：`2,197,798,912` B（~2.05 GiB） | 刷入 `system`（EROFS lz4，轻松塞进 2.77 GiB 的 `system` 分区，余量约 770 MB） | [SourceForge](https://sourceforge.net/projects/altairfr-huawei/files/LeaOS-21.0/LeaOS-21.0-20260118-iceows-google-pot.img.xz/download) \| [GitHub 镜像](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.0-mirror/LeaOS-21.0-20260118-iceows-google-pot.img.xz) |
-| 第三方 Recovery（麒麟 970 UFS） | `SHRP-Reborn_v3.2_Stable-Unofficial_charlotte-04.02.26.zip` → `recovery.img` | 压缩包：`45,663,147` B<br>`recovery.img`：`27,068,416` B（~25.8 MiB） | 刷入 `recovery_ramdisk`（32 MiB 分区，内置 Iceows 补丁版 `mkfs.f2fs Ver Iceows (Huawei EMUI9): 1.14.0`） | [SourceForge](https://sourceforge.net/projects/altairfr-huawei/files/SHRP-Recovery/SHRP-Reborn_v3.2_Stable-Unofficial_charlotte-04.02.26.zip/download) \| [GitHub 镜像 (zip)](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.0-mirror/SHRP-Reborn_v3.2_Stable-Unofficial_charlotte-04.02.26.zip) \| [预解压 `.img`](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.0-mirror/SHRP-Reborn_v3.2_charlotte-recovery.img) |
-| 内核 | 原厂 `9.1.0.350` `4.9.148` 内核（带 212 字节 SELinux 解锁补丁） | `25,165,824` B（24 MiB） | 保持原样不重刷，无需另行编译 A14 内核 | [erha-erha/honor-play-emui9.1-350-selinux-kernel](https://github.com/erha-erha/honor-play-emui9.1-350-selinux-kernel) |
-| 刷机工具 / 备用驱动 | Google `adb` / `fastboot` `37.0.1` + `google_usb_driver.zip` | 驱动包：`8,682,859` B | 自动将 2.05 GiB 原始镜像切分为 5 个 sparse 分片匹配华为 `max-download-size`（450 MiB） | Android SDK Platform-Tools \| [USB 驱动镜像](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.0-mirror/google_usb_driver.zip) |
+| Android 14 ROM（带 GApps） | `LeaOS-21.0-20260118-iceows-google-pot.img.xz` → `.img` | 压缩包：`1,357,554,880` B<br>解压后：`2,197,798,912` B（~2.05 GiB） | 刷入 `system`（EROFS lz4，轻松塞进 2.77 GiB `system` 分区） | [@Iceows SourceForge](https://sourceforge.net/projects/altairfr-huawei/files/LeaOS-21.0/LeaOS-21.0-20260118-iceows-google-pot.img.xz/download) \| [v1.0 镜像](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.0-mirror/LeaOS-21.0-20260118-iceows-google-pot.img.xz) |
+| 第三方 Recovery（麒麟 970 UFS） | `SHRP-Reborn_v3.2_Stable-Unofficial_charlotte-04.02.26.zip` → `recovery.img` | 压缩包：`45,663,147` B<br>`recovery.img`：`27,068,416` B（~25.8 MiB） | 刷入 `recovery_ramdisk`（内置 Iceows 补丁版 `make_f2fs 1.14.0`） | [@Iceows SourceForge](https://sourceforge.net/projects/altairfr-huawei/files/SHRP-Recovery/SHRP-Reborn_v3.2_Stable-Unofficial_charlotte-04.02.26.zip/download) \| [v1.0 镜像 (zip)](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.0-mirror/SHRP-Reborn_v3.2_Stable-Unofficial_charlotte-04.02.26.zip) \| [预解压 `.img`](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.0-mirror/SHRP-Reborn_v3.2_charlotte-recovery.img) |
+| 内核 | 原厂 `9.1.0.350` `4.9.148` 内核（带 212 字节 SELinux 解锁补丁） | `25,165,824` B（24 MiB） | 保持原样不重刷，无需另行编译 A14 内核 | [@erha-erha/honor-play-emui9.1-350-selinux-kernel](https://github.com/erha-erha/honor-play-emui9.1-350-selinux-kernel) |
+| Magisk Root（EMUI `9.1.0.350`） | `Magisk-v30.7.apk` 与 `COR-AL10_9.1.0.350_recovery_ramdisk_magisk307.img` | APK：`11.6 MB`<br>镜像：`33,554,432` B | 刷入 `recovery_ramdisk`（**仅限 `COR-AL10 9.1.0.350`**，`RECOVERYMODE=true`，`PREINITDEVICE=cache`） | [@topjohnwu/Magisk](https://github.com/topjohnwu/Magisk/releases) \| [v1.1 APK](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.1-optimization/Magisk-v30.7.apk) \| [v1.1 `.img`](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.1-optimization/COR-AL10_9.1.0.350_recovery_ramdisk_magisk307.img) |
+| 60Hz 流畅度模块（麒麟 970 专用） | `honorplay_smooth-v1.0.0.zip`（[源码](modules/honorplay_smooth/)） | `2,568` B | Magisk 内直刷；修复 LeaOS 图形卡顿 + 麒麟 970 CPU/Mali-G72 调优 | [v1.1 下载](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.1-optimization/honorplay_smooth-v1.0.0.zip) |
+| 3 GiB LZ4 ZRAM 模块（6GB 内存） | `honorplay_zram3g-v1.0.0.zip`（[源码](modules/honorplay_zram3g/)） | `1,630` B | Magisk 内直刷；每次带 Root 开机自动挂载 3 GiB LZ4 ZRAM | [v1.1 下载](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.1-optimization/honorplay_zram3g-v1.0.0.zip) |
+| LSPosed 框架（Zygisk 版） | `LSPosed-v1.11.0-7209-zygisk-release.zip` | `6.79 MB` | 为 `Frozen` 提供 Android 14 系统框架 Hook | [@JingMatrix/Vector (LSPosed)](https://github.com/JingMatrix/Vector/releases) \| [v1.1 镜像](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.1-optimization/LSPosed-v1.11.0-7209-zygisk-release.zip) |
+| 运行态真墓碑模块 | `Frozen8.3.0.zip` | `3.04 MB` | 类 iOS 后台挂起（`GLOBAL_SIGSTOP`，支持 `4.9.148` 内核 + A14） | [@MoWei-2077/FrozenVS](https://github.com/MoWei-2077/FrozenVS) \| [v1.1 镜像](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.1-optimization/Frozen8.3.0.zip) |
+| 开源免按键重启工具 | `RebootNya_1.9.0.apk` | `3.01 MB` | 一键**软重启**（`setprop ctl.restart zygote`），免拔线免按键保留 Magisk | [@daisukiKaffuChino/RebootNya](https://github.com/daisukiKaffuChino/RebootNya/releases) \| [v1.1 镜像](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.1-optimization/RebootNya_1.9.0.apk) |
+| 代理工具（可选） | `FlClash-0.9.4-android-arm64-v8a.apk` | `60.86 MB` | `arm64-v8a` 版本（记得在 Frozen 中加入白名单） | [@chen08209/FlClash](https://github.com/chen08209/FlClash/releases) \| [v1.1 镜像](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.1-optimization/FlClash-0.9.4-android-arm64-v8a.apk) |
+| 刷机工具 / 备用驱动 | Google `adb` / `fastboot` `37.0.1` + `google_usb_driver.zip` | 驱动包：`8,682,859` B | 自动切分 5 个 sparse 分片匹配华为 `max-download-size`（450 MiB） | Android SDK Platform-Tools \| [v1.0 驱动镜像](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.0-mirror/google_usb_driver.zip) |
 
 ### 为什么 `iceows-google-pot.img` 可以直接刷在荣耀 Play（`COR-AL10`）上？
 - Iceows 的 `LeaOS 21.0` 目录只按自己手头主力测试机命名发布了 `-pot`（P Smart 2019）和 `-ane`（P20 Lite），没有单独出 `-cor` 包。
@@ -207,21 +219,67 @@ cp /dev/block/by-name/recovery_ramdisk ./patched.img
 
 ---
 
-## 7. 开机后续事项与救砖回退方案
+## 7. 阶段六：刷后深度优化（Magisk v30.7、3 GiB ZRAM、真墓碑与 60Hz 流畅度调优）
+
+### 7.1 Magisk v30.7（`recovery_ramdisk`）与 EMUI 9.1 带 Root 开机 / 免按键软重启
+- **刷入 Magisk v30.7**：EMUI 9.1 无独立 `boot` ramdisk，Magisk 需以 `RECOVERYMODE=true`、`KEEPVERITY=true`、`KEEPFORCEENCRYPT=true`、`PREINITDEVICE=cache` 修补原厂 `recovery_ramdisk` 后刷入（会覆盖 SHRP，日后随时可用 Fastboot 刷回 SHRP）：
+  ```powershell
+  adb -s <序列号> install -r Magisk-v30.7.apk
+  # 仅限荣耀 Play COR-AL10 EMUI 9.1.0.350 使用！
+  fastboot -s <序列号> flash recovery_ramdisk COR-AL10_9.1.0.350_recovery_ramdisk_magisk307.img
+  ```
+- **EMUI 9.1 冷开机精准松手时机**（彻底关机后首次引导进 Root）：
+  1. **先拔掉数据线**（插线按音量上会被华为引导进 eRecovery）。
+  2. 同时按住 **「音量上 + 电源键」** 不放，直到屏幕出现英文解锁警告（`Your device has been unlocked...`）。
+  3. 此时可松开电源键，但 **「音量上」继续按住约 5 秒**，看到底部刚出现 **`Your device is booting now...`** 的瞬间 **立刻松开音量上**（松早了会退回 `enter_recovery=0` 普通无 Root 系统；按太久会进原厂 Recovery，⚠️ 切勿在原厂 Recovery 点清除数据）。
+  4. 首次进桌面后打开 Magisk 管理器完成环境初始化（补齐 `/data/adb/magisk`）并开启 **Zygisk**。
+- **日常免拔线、免按键重启方案（[`RebootNya v1.9.0`](https://github.com/daisukiKaffuChino/RebootNya)）**：
+  - 华为 EMUI 9.1 闭源 Bootloader 在插 USB 线执行 `reboot recovery` 时容易跳转 eRecovery 或黑屏。
+  - 日常 99% 的场景（装完 LSPosed 模块、修改系统框架）只需直接打开 **`RebootNya` →「软重启」**（执行 `setprop ctl.restart zygote`），实测 **6.5 秒完成**，**免拔线、免按实体键**，全程完整保留 `Magisk v30.7` 与 `3 GiB ZRAM`。
+
+### 7.2 开机自启 3 GiB LZ4 ZRAM（`honorplay_zram3g`）vs 硬盘虚拟内存
+- **为什么首选 ZRAM 而非闪存 Swap**：荣耀 Play 的 128 GB UFS 2.1（`KLUDG4U1EA-B0C1`）虽比 eMMC 快，但硬盘 Swap 仍有闪存写入损耗和毫秒级 I/O 抖动；**LZ4 ZRAM** 在内存内直接高速压缩冷页，速度达数 GB/s 且**零闪存损耗**。
+- 在 Magisk 中刷入 [`honorplay_zram3g-v1.0.0.zip`](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.1-optimization/honorplay_zram3g-v1.0.0.zip)（[源码](modules/honorplay_zram3g/)），每次带 Root 开机自动启用 `3 GiB`（`3,221,225,472` B）LZ4 ZRAM（`swapon -p 100`、`vm.page-cluster=0`、`vm.swappiness=80`）。
+
+### 7.3 类 iOS 运行态真墓碑（`LSPosed v1.11.0 + Frozen 8.3.0`）
+- **运行态真墓碑 vs 冰箱/雹**：冰箱/雹是通过 `pm disable` 停用并杀进程，重新点开需要冷启动；真墓碑是在应用切后台后将其进程挂起在内存中（**0% CPU 耗电**），再次点开图标时 **同 PID 原地毫秒级恢复**。
+- **为什么选择 `Frozen 8.3.0`（`MoWei-2077/FrozenVS`）**：
+  - 本机 Linux `4.9.148` 内核没有 **cgroup v2 `cgroup.freeze`**（因此 `Cirno` 与 Android 14 原生 `cached_apps_freezer` 无法使用 V2，上游 `freezeit v3.0.0` 也硬性拦截了 `< 5.10` 内核）。
+  - `Frozen 8.3.0` 取消了 5.10 拦截并适配 Android 14（`targetSdk=34`），在 4.9 内核上自动启用 **`全局 SIGSTOP`** 模式（规避 4.9 cgroup v1 缺少 `freezer.killable` 导致的 `lmkd` 卡死风险），配合 **LSPosed 系统框架 Hook** 实现防 ANR 崩溃与点击瞬时唤醒。
+- **部署与必加白名单**：
+  1. Magisk 开启 **Zygisk**，依次刷入 `LSPosed-v1.11.0-7209-zygisk-release.zip` 与 `Frozen8.3.0.zip`。
+  2. 重启后打开 **LSPosed 管理器 → 模块 → Frozen**，打开模块开关并确认勾选 **「系统框架（system）」**，再点 **RebootNya → 软重启**（6.5 秒生效）。
+  3. **关键白名单**（在 Frozen「配置」中设为 `🍀自由后台`，或写入 `/data/adb/modules/Frozen/appcfg.txt` 如 `包名 40 1`）：务必放行代理工具（`com.follow.clash`）、输入法（`com.bytedance.android.doubaoime`）、谷歌服务框架（`com.google.android.gms` / `gsf`）、`Magisk` 以及微信等即时通讯软件。
+- **实机验证结果**：Chrome、YouTube、Gmail、云端硬盘、谷歌翻译切后台后均自动进入内核 `T (stopped) / do_signal_stop` 零耗电挂起态；点开 YouTube 时**同 PID 原地秒恢复**，切走后再次自动挂起。
+
+### 7.4 60Hz 流畅度与低延迟跟手调优（`honorplay_smooth` — 仅限麒麟 970）
+- **硬件刷新率说明**：荣耀 Play LCD 屏幕物理上限就是 **`60.00 Hz`**（不支持 90/120Hz）。滑动不跟手与掉帧并非 60Hz 本身导致，而是实测抓到了 4 处系统瓶颈，现已全部打包进 [`honorplay_smooth-v1.0.0.zip`](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.1-optimization/honorplay_smooth-v1.0.0.zip)（[源码](modules/honorplay_smooth/)）：
+  1. **修复 `LeaOS 21.0` `/system/build.prop` 历史遗留图形属性**：原包内置的 `hwui.disable_vsync=true`、`debug.hwui.use_buffer_age=false`、`debug.egl.profiler=1`、`debug.hwui.profile=true` 导致每帧 `DequeueBuffer` 阻塞 `5.4–8.0 ms`、总延迟达 3 帧（`48.2 ms`）且强行全屏重绘。已通过 Magisk `system.prop` 修正，同时**特意保留华为 EMUI 9.1 HWC 2.2 必需的 `debug.sf.disable_backpressure=1` 与 `debug.sf.latch_unsignaled=1`**（若关闭这两项会导致桌面双图层围栏卡死跌至 14.5 FPS）。
+  2. **修复麒麟 970 `interactive` 大核调频滞后 118ms**：优化 `policy0`（A53）与 `policy4`（A73）参数（采样周期 `12ms`、大核升频延迟降至 `10–15ms`、`io_is_busy=1`、`fast_ramp_down=0`）。
+  3. **抬升 Mali-G72 GPU 唤醒起步档**：桌面滑动时原 GPU 锁在最低 `237 MHz` 导致单帧耗时 11–14ms；已将唤醒起步档小幅抬至中档 **`415 MHz`**（满频 `767 MHz`，空闲/息屏仍自动断电休眠，实测 GPU 仅 `27℃`）并切至 `scene=1`（`550 MHz` 加速档）。
+  4. **关闭窗口模糊与后台调试日志**：启用 `disable_window_blurs=1`、`0.5x` 动画缩放，并自动停用可能残留的 `dump-logs` 调试服务。
+
+| 实测指标（`dumpsys gfxinfo`，60Hz） | 优化前 | 刷入 `honorplay_smooth` 后 |
+| :--- | :--- | :--- |
+| 设置页每帧缓冲阻塞（`DequeueBuffer`） | `5.4–8.0 ms` | **`0.04 ms`**（降低约 150 倍） |
+| 设置页中位帧耗时 / 掉帧率 | `21 ms` / 旧版 `98.6%` | **`15 ms` / `0.00%`（旧版 `9.8%`）** |
+| 桌面滑动中位帧耗时 / 丢帧数 | `25–69 ms` / 频繁丢帧 | **`16 ms` / `0` 丢帧** |
+
+---
+
+## 8. 开机后续事项与救砖回退方案
 
 - **国内首次初始化、Play 商店与 SIM 卡热插拔注意事项**：
   - `LeaOS 21.0` 默认开启 `WITH_ADB_INSECURE=true`，开机后有线 ADB 直接可用。
   - 若国内无外网导致 Google 开机向导卡在“正在准备我的设备”，先**离线跳过 Wi-Fi** 进桌面，再用 `adb install` 装代理软件后登录 Google。
   - 若遇 Play 商店首次后台自更新时点“安装”无反应（`adb shell am force-stop com.android.vending`）或 EMUI 9.1 巴龙基带热插拔 SIM 卡无信号（插好卡重启一次手机），可参考 [huawei-enjoy9plus-a14-flash-guide 阶段四](https://github.com/erha-erha/huawei-enjoy9plus-a14-flash-guide/blob/main/README.zh-CN.md#5-%E9%98%B6%E6%AE%B5%E5%9B%9B%E5%9B%BD%E5%86%85%E6%97%A0%E5%A4%96%E7%BD%91%E5%88%9D%E5%A7%8B%E5%8C%96%E4%BB%A3%E7%90%86%E9%85%8D%E7%BD%AEgoogle-%E5%A5%97%E4%BB%B6%E4%B8%8E-sim-%E5%8D%A1%E6%8E%92%E5%9D%91)。
-- **重新获取 Magisk Root（可选）**：
-  - 建议先验证完日常通话、Wi-Fi、相机稳定后再考虑重刷 Magisk；注意 EMUI 9.1 下 Magisk 与 SHRP 共用 `recovery_ramdisk` 分区，互相覆盖。
 - **随时退回原厂 EMUI `9.1.0.350`**：
   - 在 Fastboot 下刷回之前备份的 `system.img`、`stock_recovery_ramdisk.img`（及按需刷回 `stock_kernel_350.img`），再进原厂 Recovery 恢复出厂设置即可。
   - **严禁**用 `fastboot flash` 直接刷写 `oeminfo` / `nvme`，此类基带与机型分区仅在确需救砖时由 root 下 `dd` 慎重恢复。
 
 ---
 
-## 8. 踩坑速查表
+## 9. 踩坑速查表
 
 | 现象 / 报错 | 实际根因 | 解决方案 |
 | :--- | :--- | :--- |
@@ -229,6 +287,26 @@ cp /dev/block/by-name/recovery_ramdisk ./patched.img
 | 备份时仅 `splash2.img` SHA-256 校验失败 | `/splash2` 为系统运行时 `rw` 挂载的实时日志分区 | 正常现象，忽略即可 |
 | `adb reboot bootloader` 直接重启回正常 EMUI | EMUI / Magisk `recovery_ramdisk` 忽略软件重启到 bootloader 参数 | 拔线关机后，**按住音量下键不放插数据线**手动进 Fastboot |
 | `fastboot devices` 为空、设备管理器显示 `HI3650` | 之前 Zadig/`libwdi` 装的 `hi3650.inf` 占用 `VID_18D1&PID_D00D`，缺 `{F72FE0D4-...}` GUID 且锁死 `USBDevice` 分类 | 管理员 PowerShell 执行 `pnputil /delete-driver oemXX.inf /uninstall /force`，回退到 Win11 自带 `winusb.inf` |
-| 按音量上 + 电源进了 eRecovery 而非 SHRP | 按组合键时没拔掉 USB 数据线 | **先拔线**，长按音量上 + 电源进 SHRP 后再重新插线 |
+| 按音量上 + 电源进了 eRecovery 或未加载 Magisk | 没拔掉 USB 线，或音量上松早了/按太久 | **先拔线**；进 Magisk 在刚出现 `Your device is booting now...` 时松开音量上；日常重载模块直接用 **RebootNya → 软重启** |
 | 刷完 A14 卡在 LineageOS 三个转圈超 5 分钟 | EMUI 9.1 原厂 Recovery 格出的 F2FS 触发 `F2FS-fs (sdd66): Invalid checksum crc` → `/data` 未挂载 → `credstore` 无限崩溃 | 刷 `SHRP-Reborn v3.2 charlotte`，执行 `/system/bin/make_f2fs -f -O encrypt -w 4096 /dev/block/by-name/userdata` 并实测 `mount -t f2fs` 后清 `/cache` 重启 |
 | 首次开机向导卡在“正在准备我的设备” | 国内无外网导致 Google 联网检查超时 | 离线跳过 Wi-Fi 进桌面，有线 ADB 装代理后再登录 Google |
+| 刷完 `LeaOS 21.0` 滑动掉帧、手感发粘不跟手 | LeaOS `/system/build.prop` 开启了 `hwui.disable_vsync=true`、`use_buffer_age=false`、`egl.profiler=1` 且麒麟 970 CPU/GPU 调频滞后 | 在 Magisk 刷入 `honorplay_smooth-v1.0.0.zip`（切勿关闭华为 HWC 2.2 的 `disable_backpressure=1` 与 `latch_unsignaled=1`） |
+| 若强行设置 `debug.sf.use_phase_offsets_as_durations=1` 导致黑屏循环 | 与本机 `ro.surface_flinger.vsync_event_phase_offset_ns` 冲突触发 `WorkDuration` 断言崩溃 | 严禁在 LeaOS 21.0 上设置 `debug.sf.use_phase_offsets_as_durations=1` |
+
+---
+
+## 10. 致谢、版权声明与原作者署名
+
+本仓库 GitHub Releases 中镜像的第三方开源软件均为**未经修改的官方原版发布包**，仅用于方便社区玩家高速下载；所有版权归原作者所有并遵循其原开源协议。闭源或未声明再分发许可的软件不作镜像，仅提供官方原地址链接。
+
+| 项目 / 组件 | 原作者 | 上游仓库 / 官方地址 | 开源协议 |
+| :--- | :--- | :--- | :--- |
+| **LeaOS 21.0 (Android 14 GSI)** 与 **EMUI 9 F2FS `make_f2fs` 补丁** | **[@Iceows](https://github.com/Iceows)**（AltairFR） | [Iceows/huawei-creator](https://github.com/Iceows/huawei-creator) \| [SourceForge](https://sourceforge.net/projects/altairfr-huawei/) | 开源（LineageOS / Apache-2.0 / GPL） |
+| **SHRP-Reborn v3.2** | **Team SHRP** & **[@Iceows](https://github.com/Iceows)** | [SHRP-Reborn](https://github.com/SHRP-Reborn) \| [SourceForge](https://sourceforge.net/projects/altairfr-huawei/files/SHRP-Recovery/) | GPL-3.0 |
+| **Magisk v30.7** | **[@topjohnwu](https://github.com/topjohnwu)** | [topjohnwu/Magisk](https://github.com/topjohnwu/Magisk) | GPL-3.0 |
+| **LSPosed v1.11.0（Zygisk 版）** | **[@JingMatrix](https://github.com/JingMatrix)** & LSPosed Developers | [JingMatrix/Vector](https://github.com/JingMatrix/Vector) | GPL-3.0 |
+| **Frozen 8.3.0（运行态真墓碑）** | **[@MoWei-2077](https://github.com/MoWei-2077)**（基于 **[@jark006](https://github.com/jark006)** 分支） | [MoWei-2077/FrozenVS](https://github.com/MoWei-2077/FrozenVS) \| [jark006/freezeitVS](https://github.com/jark006/freezeitVS) | GPL-3.0 |
+| **RebootNya v1.9.0（开源重启工具）** | **[@daisukiKaffuChino](https://github.com/daisukiKaffuChino)** | [daisukiKaffuChino/RebootNya](https://github.com/daisukiKaffuChino/RebootNya) | Apache-2.0 |
+| **FlClash v0.9.4** | **[@chen08209](https://github.com/chen08209)** | [chen08209/FlClash](https://github.com/chen08209/FlClash) | GPL-3.0 |
+| **荣耀 Play `9.1.0.350` 212 字节 SELinux 内核补丁** | **[@erha-erha](https://github.com/erha-erha)** | [erha-erha/honor-play-emui9.1-350-selinux-kernel](https://github.com/erha-erha/honor-play-emui9.1-350-selinux-kernel) | 开源 |
+| **姊妹机型实战指南（华为畅享 9 Plus / 麒麟 710）** | **[@erha-erha](https://github.com/erha-erha)** | [erha-erha/huawei-enjoy9plus-a14-flash-guide](https://github.com/erha-erha/huawei-enjoy9plus-a14-flash-guide) | 开源 |

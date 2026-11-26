@@ -4,33 +4,45 @@
 
 > **Target Device**: Honor Play (`COR-AL10`, device codename `HWCOR`, HiSilicon Kirin 970, `arm64-v8a`, UFS storage, `system = /dev/block/sdd62 / 2.97 GB (2,969,567,232 B)`, `userdata = /dev/block/sdd66 / 112 GB (120,586,240,000 B)`)  
 > **Starting State**: Unlocked Bootloader (`verifiedbootstate=orange`), Stock EMUI `9.1.0.350(C00E440R1P2)` (`Linux 4.9.148`, VNDK 28, EROFS `/` and `/vendor`), Magisk `27.0` in `recovery_ramdisk`, and the stock `9.1.0.350` kernel with the [212-byte SELinux-unlock patch](https://github.com/erha-erha/honor-play-emui9.1-350-selinux-kernel) (boots Enforcing by default).  
-> **Verified Outcome**: **Android 14** (`LeaOS 21.0` Google / LineageOS 21 pre-QPR2, `UQ1A.240205.004`, EROFS) + `SHRP-Reborn v3.2 charlotte` Recovery (Kirin 970 UFS) + stock `9.1.0.350` kernel (no custom-compiled A14 kernel needed) — booted cleanly in **90 seconds** with 112 GB `/data` mounted and wired ADB online immediately.
+> **Verified Outcome**: **Android 14** (`LeaOS 21.0` Google / LineageOS 21 pre-QPR2, `UQ1A.240205.004`, EROFS) + `SHRP-Reborn v3.2 charlotte` Recovery (Kirin 970 UFS) + stock `9.1.0.350` kernel (no custom-compiled A14 kernel needed) — booted cleanly in **90 seconds** with 112 GB `/data` mounted, plus persistent **Magisk v30.7**, **3 GiB LZ4 ZRAM**, **iOS-style runtime tombstone (`LSPosed v1.11.0 + Frozen 8.3.0`)**, **`RebootNya` soft reboot**, and **Kirin 970 + Mali-G72 60Hz low-latency smoothness tuning (`honorplay_smooth`)**.
 
 ---
 
 ## Table of Contents
 
-- [1. Verified Images & Tools](#1-verified-images--tools)
+- [1. Verified Images, Modules & Tools](#1-verified-images-modules--tools)
 - [2. Phase 1: Full Partition Backup, Stock Kernel Rescue & Stock Recovery Extraction](#2-phase-1-full-partition-backup-stock-kernel-rescue--stock-recovery-extraction)
 - [3. Phase 2: Entering Fastboot & Fixing Windows 11 `HI3650` (`libwdi`) Driver Hijack](#3-phase-2-entering-fastboot--fixing-windows-11-hi3650-libwdi-driver-hijack)
 - [4. Phase 3: Flashing Android 14 & SHRP (`charlotte`)](#4-phase-3-flashing-android-14--shrp-charlotte)
 - [5. Phase 4: Root-Cause Analysis of the 3-Circle Boot Hang (Cross-Device EMUI 9.1 F2FS Issue)](#5-phase-4-root-cause-analysis-of-the-3-circle-boot-hang-cross-device-emui-91-f2fs-issue)
 - [6. Phase 5: Proper `/data` Formatting in SHRP & First Boot Verification](#6-phase-5-proper-data-formatting-in-shrp--first-boot-verification)
-- [7. Post-Boot Notes & Restore Path](#7-post-boot-notes--restore-path)
-- [8. Troubleshooting Quick Reference](#8-troubleshooting-quick-reference)
+- [7. Phase 6: Post-Flash Optimization (Magisk v30.7, 3 GiB ZRAM, True Tombstone & 60Hz Smoothness)](#7-phase-6-post-flash-optimization-magisk-v307-3-gib-zram-true-tombstone--60hz-smoothness)
+- [8. Post-Boot Notes & Restore Path](#8-post-boot-notes--restore-path)
+- [9. Troubleshooting Quick Reference](#9-troubleshooting-quick-reference)
+- [10. Credits, Copyright & Upstream Attribution](#10-credits-copyright--upstream-attribution)
 
 ---
 
-## 1. Verified Images & Tools
+## 1. Verified Images, Modules & Tools
 
-> **Fast Download Mirror (GitHub Releases)**: If SourceForge is slow or throttled in your region, grab the verified mirror pack (including `SHA256SUMS.txt` and pre-extracted `recovery.img`) directly from **[Releases (`v1.0-mirror`)](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/tag/v1.0-mirror)**.
+> **Fast Download Mirrors (GitHub Releases)**:
+> - **Core ROM & Recovery Pack**: **[Releases (`v1.0-mirror`)](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/tag/v1.0-mirror)** (`LeaOS 21.0`, `SHRP charlotte`, USB driver, `SHA256SUMS.txt`).
+> - **Root, ZRAM, Tombstone & Smoothness Pack (Honor Play / Kirin 970 ONLY)**: **[Releases (`v1.1-optimization`)](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/tag/v1.1-optimization)** (`honorplay_smooth`, `honorplay_zram3g`, `COR-AL10 9.1.0.350` Magisk v30.7 recovery image, plus GPLv3/Apache-2.0 upstream mirrors).
+> - **⚠️ Hardware Separation Warning**: All modules in this repo target **Honor Play (`COR-AL10` / Kirin 970 / Mali-G72 / 6 GB RAM)** ONLY. For **Huawei Enjoy 9 Plus (Kirin 710 / Mali-G51 / 4 GB RAM)**, use the separate repo [huawei-enjoy9plus-a14-flash-guide](https://github.com/erha-erha/huawei-enjoy9plus-a14-flash-guide). Both custom modules include an automatic `ro.hardware` check in `customize.sh` to prevent accidental cross-flashing.
 
-| Role | Artifact / Tool | Verified Size | Target Partition / Notes | Source & Fast Mirror |
+| Role | Artifact / Tool | Verified Size | Target Partition / Notes | Upstream Source & Fast Mirror |
 | :--- | :--- | :--- | :--- | :--- |
-| Android 14 ROM (GApps) | `LeaOS-21.0-20260118-iceows-google-pot.img.xz` → `.img` | Compressed: `1,357,554,880` B<br>Extracted: `2,197,798,912` B (~2.05 GiB) | Flash to `system` (EROFS lz4; easily fits inside 2.77 GiB `system` partition with ~770 MB spare) | [SourceForge](https://sourceforge.net/projects/altairfr-huawei/files/LeaOS-21.0/LeaOS-21.0-20260118-iceows-google-pot.img.xz/download) \| [GitHub Mirror](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.0-mirror/LeaOS-21.0-20260118-iceows-google-pot.img.xz) |
-| Custom Recovery (Kirin 970 UFS) | `SHRP-Reborn_v3.2_Stable-Unofficial_charlotte-04.02.26.zip` → `recovery.img` | Zip: `45,663,147` B<br>`recovery.img`: `27,068,416` B (~25.8 MiB) | Flash to `recovery_ramdisk` (32 MiB partition; includes Iceows patched `mkfs.f2fs Ver Iceows (Huawei EMUI9): 1.14.0`) | [SourceForge](https://sourceforge.net/projects/altairfr-huawei/files/SHRP-Recovery/SHRP-Reborn_v3.2_Stable-Unofficial_charlotte-04.02.26.zip/download) \| [GitHub Mirror (zip)](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.0-mirror/SHRP-Reborn_v3.2_Stable-Unofficial_charlotte-04.02.26.zip) \| [Pre-extracted `.img`](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.0-mirror/SHRP-Reborn_v3.2_charlotte-recovery.img) |
-| Kernel | Stock `9.1.0.350` `4.9.148` kernel (with 212-byte SELinux-unlock patch) | `25,165,824` B (24 MiB) | Kept intact on `kernel` — no custom A14 kernel compilation required | [erha-erha/honor-play-emui9.1-350-selinux-kernel](https://github.com/erha-erha/honor-play-emui9.1-350-selinux-kernel) |
-| Platform Tools / USB Driver | Google `adb` / `fastboot` `37.0.1` + optional `google_usb_driver.zip` | Driver zip: `8,682,859` B | Auto-sparses raw 2.05 GiB `.img` into 5 chunks matching Huawei's `max-download-size` (450 MiB) | Android SDK Platform-Tools \| [USB Driver Mirror](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.0-mirror/google_usb_driver.zip) |
+| Android 14 ROM (GApps) | `LeaOS-21.0-20260118-iceows-google-pot.img.xz` → `.img` | Compressed: `1,357,554,880` B<br>Extracted: `2,197,798,912` B (~2.05 GiB) | Flash to `system` (EROFS lz4; fits inside 2.77 GiB `system` partition) | [@Iceows SourceForge](https://sourceforge.net/projects/altairfr-huawei/files/LeaOS-21.0/LeaOS-21.0-20260118-iceows-google-pot.img.xz/download) \| [v1.0 Mirror](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.0-mirror/LeaOS-21.0-20260118-iceows-google-pot.img.xz) |
+| Custom Recovery (Kirin 970 UFS) | `SHRP-Reborn_v3.2_Stable-Unofficial_charlotte-04.02.26.zip` → `recovery.img` | Zip: `45,663,147` B<br>`recovery.img`: `27,068,416` B (~25.8 MiB) | Flash to `recovery_ramdisk` (includes Iceows patched `make_f2fs 1.14.0`) | [@Iceows SourceForge](https://sourceforge.net/projects/altairfr-huawei/files/SHRP-Recovery/SHRP-Reborn_v3.2_Stable-Unofficial_charlotte-04.02.26.zip/download) \| [v1.0 Mirror (zip)](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.0-mirror/SHRP-Reborn_v3.2_Stable-Unofficial_charlotte-04.02.26.zip) \| [Pre-extracted `.img`](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.0-mirror/SHRP-Reborn_v3.2_charlotte-recovery.img) |
+| Kernel | Stock `9.1.0.350` `4.9.148` kernel (with 212-byte SELinux-unlock patch) | `25,165,824` B (24 MiB) | Kept intact on `kernel` — no custom A14 kernel needed | [@erha-erha/honor-play-emui9.1-350-selinux-kernel](https://github.com/erha-erha/honor-play-emui9.1-350-selinux-kernel) |
+| Magisk Root (EMUI 9.1 `9.1.0.350`) | `Magisk-v30.7.apk` & `COR-AL10_9.1.0.350_recovery_ramdisk_magisk307.img` | APK: `11.6 MB`<br>Image: `33,554,432` B | Flash patched image to `recovery_ramdisk` (**ONLY** for `COR-AL10 9.1.0.350`, `RECOVERYMODE=true`, `PREINITDEVICE=cache`) | [@topjohnwu/Magisk](https://github.com/topjohnwu/Magisk/releases) \| [v1.1 APK](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.1-optimization/Magisk-v30.7.apk) \| [v1.1 `.img`](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.1-optimization/COR-AL10_9.1.0.350_recovery_ramdisk_magisk307.img) |
+| 60Hz Smoothness Module (Kirin 970) | `honorplay_smooth-v1.0.0.zip` ([source](modules/honorplay_smooth/)) | `2,568` B | Flash in Magisk Manager; fixes LeaOS HWUI/VSync lag + Kirin 970 CPU/Mali-G72 tuning | [v1.1 Release](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.1-optimization/honorplay_smooth-v1.0.0.zip) |
+| 3 GiB LZ4 ZRAM Module (6 GB RAM) | `honorplay_zram3g-v1.0.0.zip` ([source](modules/honorplay_zram3g/)) | `1,630` B | Flash in Magisk Manager; auto-enables 3 GiB LZ4 ZRAM on every Magisk boot | [v1.1 Release](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.1-optimization/honorplay_zram3g-v1.0.0.zip) |
+| LSPosed Framework (Zygisk) | `LSPosed-v1.11.0-7209-zygisk-release.zip` | `6.79 MB` | Required for Frozen System Framework Hook (Android 14 API 34) | [@JingMatrix/Vector (LSPosed)](https://github.com/JingMatrix/Vector/releases) \| [v1.1 Mirror](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.1-optimization/LSPosed-v1.11.0-7209-zygisk-release.zip) |
+| True Runtime Tombstone | `Frozen8.3.0.zip` | `3.04 MB` | iOS-style background suspension (`GLOBAL_SIGSTOP`, works on Linux `4.9.148` + A14) | [@MoWei-2077/FrozenVS](https://github.com/MoWei-2077/FrozenVS) \| [v1.1 Mirror](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.1-optimization/Frozen8.3.0.zip) |
+| Open-Source Reboot Tool | `RebootNya_1.9.0.apk` | `3.01 MB` | One-tap **Soft Reboot** (`setprop ctl.restart zygote`) without unplugging USB or losing Magisk | [@daisukiKaffuChino/RebootNya](https://github.com/daisukiKaffuChino/RebootNya/releases) \| [v1.1 Mirror](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.1-optimization/RebootNya_1.9.0.apk) |
+| Proxy Client (Optional) | `FlClash-0.9.4-android-arm64-v8a.apk` | `60.86 MB` | `arm64-v8a` proxy client (whitelist in Frozen!) | [@chen08209/FlClash](https://github.com/chen08209/FlClash/releases) \| [v1.1 Mirror](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.1-optimization/FlClash-0.9.4-android-arm64-v8a.apk) |
+| Platform Tools / USB Driver | Google `adb` / `fastboot` `37.0.1` + optional `google_usb_driver.zip` | Driver zip: `8,682,859` B | Auto-sparses raw 2.05 GiB `.img` into 5 chunks matching Huawei's `max-download-size` (450 MiB) | Android SDK Platform-Tools \| [v1.0 Driver Mirror](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.0-mirror/google_usb_driver.zip) |
 
 ### Why `iceows-google-pot.img` Works on Honor Play (`COR-AL10`)
 - Iceows publishes `LeaOS 21.0` images named after his test devices (`pot` = P Smart 2019, `ane` = P20 Lite), without a separate `-cor` file for Android 14.
@@ -209,21 +221,68 @@ Comparing this failure with [Huawei Enjoy 9 Plus (`JKM-AL00b` / Kirin 710)](http
 
 ---
 
-## 7. Post-Boot Notes & Restore Path
+## 7. Phase 6: Post-Flash Optimization (Magisk v30.7, 3 GiB ZRAM, True Tombstone & 60Hz Smoothness)
+
+### 7.1 Magisk v30.7 (`recovery_ramdisk`) & EMUI 9.1 Boot / Soft-Reboot Workflow
+- **Flashing Magisk v30.7**: Because EMUI 9.1 has no standalone `boot` ramdisk, Magisk patches `recovery_ramdisk` with `RECOVERYMODE=true`, `KEEPVERITY=true`, `KEEPFORCEENCRYPT=true`, and `PREINITDEVICE=cache` (this overwrites SHRP; re-flash SHRP anytime via Fastboot if needed).
+  ```powershell
+  # Install Magisk v30.7 Manager
+  adb -s <SERIAL> install -r Magisk-v30.7.apk
+  # Flash stock 9.1.0.350 recovery_ramdisk patched with Magisk v30.7 (ONLY for COR-AL10 9.1.0.350!)
+  fastboot -s <SERIAL> flash recovery_ramdisk COR-AL10_9.1.0.350_recovery_ramdisk_magisk307.img
+  ```
+- **Exact Cold-Boot Key Timing on EMUI 9.1** (when booting from powered-off state):
+  1. **Unplug the USB cable** first (holding Volume Up while USB is connected enters Huawei eRecovery).
+  2. Hold **Volume Up + Power** continuously until the unlocked warning screen appears (`Your device has been unlocked...`).
+  3. You may release Power, but **keep holding Volume Up** until **`Your device is booting now...`** appears (~5 seconds) — **release Volume Up immediately at that moment**. Releasing too early falls back to `enter_recovery=0` (unrooted normal OS); holding too long enters stock Huawei Recovery (⚠️ **never** tap Factory Reset there!).
+  4. On first Magisk boot, open Magisk Manager to complete the one-time environment setup (populates `/data/adb/magisk`) and enable **Zygisk**.
+- **Daily Zero-Button Reboots via [`RebootNya v1.9.0`](https://github.com/daisukiKaffuChino/RebootNya)**:
+  - Huawei EMUI 9.1's closed-source Bootloader intercepts wired `reboot recovery` into eRecovery/power-off.
+  - For 99% of daily restarts (activating LSPosed modules, refreshing system tweaks), tap **`RebootNya` → Soft Reboot** (`setprop ctl.restart zygote`). Verified to reload `system_server` + LSPosed hooks in **6.5 seconds** with **zero cable unplugging, zero hardware buttons**, while preserving `Magisk v30.7` and `3 GiB ZRAM`.
+
+### 7.2 Persistent 3 GiB LZ4 ZRAM (`honorplay_zram3g`) vs Disk Swap
+- **Why ZRAM beats disk swap on Honor Play**: Honor Play's 128 GB UFS 2.1 (`KLUDG4U1EA-B0C1`) is fast for file storage, but disk-based swap still suffers flash wear and millisecond I/O spikes. **LZ4 ZRAM** compresses cold memory pages entirely inside RAM at multi-GB/s with zero flash wear.
+- Flash [`honorplay_zram3g-v1.0.0.zip`](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.1-optimization/honorplay_zram3g-v1.0.0.zip) ([source](modules/honorplay_zram3g/)) in Magisk Manager to auto-enable `3 GiB` (`3,221,225,472` B) LZ4 ZRAM (`swapon -p 100`, `vm.page-cluster=0`, `vm.swappiness=80`) on every Magisk boot.
+
+### 7.3 True iOS-Style Runtime Tombstone (`LSPosed v1.11.0 + Frozen 8.3.0`) on Android 14 + Linux 4.9
+- **Runtime Tombstone vs "IceBox/Hail"**: Unlike app disablers that `pm disable` and kill apps (forcing cold restarts), a true runtime tombstone suspends background app processes in RAM at **0% CPU** and **instantaneously resumes the exact same PID** when tapped.
+- **Why `Frozen 8.3.0` (`MoWei-2077/FrozenVS`)**:
+  - Linux `4.9.148` lacks **cgroup v2 `cgroup.freeze`** (so `Cirno` and Android 14 native `cached_apps_freezer` cannot freeze via cgroup v2, and upstream `freezeit v3.0.0` blocks kernels `< 5.10`).
+  - `Frozen 8.3.0` removes the 5.10 kernel gate, builds for `arm64-v8a` + Android 14 (`targetSdk=34`), and automatically uses **`GLOBAL_SIGSTOP`** (`SIGSTOP`/`SIGCONT`, avoiding Linux 4.9 cgroup v1 missing-`freezer.killable` `lmkd` hangs) paired with an **LSPosed System Framework Hook** to suppress ANR crashes and thaw immediately on resume.
+- **Deployment & Whitelist**:
+  1. Enable **Zygisk** in Magisk, flash `LSPosed-v1.11.0-7209-zygisk-release.zip` and `Frozen8.3.0.zip`.
+  2. Reboot (or soft-reboot), open **LSPosed Manager → Modules → Frozen**, turn on **Enable module** and verify **System Framework (`system`)** is checked, then tap **RebootNya → Soft Reboot** (6.5s).
+  3. **Critical Whitelist (`自由后台` / `40 1` in `/data/adb/modules/Frozen/appcfg.txt`)**: Always whitelist your proxy VPN (`com.follow.clash`), IME (`com.bytedance.android.doubaoime`), `com.google.android.gms`, `com.google.android.gsf`, `com.topjohnwu.magisk`, and real-time messaging apps (`com.tencent.mm`, etc.).
+- **Verified Live Behavior**: Background Chrome, YouTube, Gmail, Drive, and Translate all enter kernel `State: T (stopped)` / `wchan: do_signal_stop` (0% CPU). Tapping YouTube resumes the **exact same PID** instantaneously (`S (sleeping)`), then auto-suspends again after switching away.
+
+### 7.4 60Hz Smoothness & Low-Latency Tuning (`honorplay_smooth` — Kirin 970 ONLY)
+- **Hardware Refresh Rate Fact**: Honor Play's LCD panel physical maximum is **`60.00 Hz`** (`supportedModes [{fps=60.000004}]`). Sluggish scrolling and laggy touch feel were **not** caused by 60Hz itself, but by 4 verified software bottlenecks fixed in [`honorplay_smooth-v1.0.0.zip`](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.1-optimization/honorplay_smooth-v1.0.0.zip) ([source](modules/honorplay_smooth/)):
+  1. **Broken Legacy Graphics Props in `LeaOS 21.0` `/system/build.prop`**: `hwui.disable_vsync=true`, `debug.hwui.use_buffer_age=false`, `debug.egl.profiler=1`, and `debug.hwui.profile=true` caused `5.4–8.0 ms` per-frame `DequeueBuffer` stalls, 3-frame (`48.2 ms`) display latency, and forced full-screen redraws. Fixed cleanly via Magisk `system.prop` **while deliberately keeping Huawei EMUI 9.1 HWC 2.2's required `debug.sf.disable_backpressure=1` and `debug.sf.latch_unsignaled=1`** (disabling those two causes Mali-G72 dual-layer Launcher3 fence stalls down to 14.5 FPS!).
+  2. **Kirin 970 `interactive` Governor 118ms Big-Core Lag**: Tuned `policy0` (A53) & `policy4` (A73) to `12 ms` polling (`timer_rate`), `10–15 ms` big-core ramp delay, `io_is_busy=1`, `fast_ramp_down=0`.
+  3. **Mali-G72 GPU Sticking at `237 MHz`**: Raised wake floor from `237 MHz` to mid-step **`415 MHz`** (out of `767 MHz`; still power-gates when idle, measured GPU temp `27℃`) + `scene=1` (`550 MHz` hispeed).
+  4. **Window Blurs & Runaway Debug Logger**: Disabled Android 14 GPU blurs (`disable_window_blurs=1`), set `0.5x` animation scales, and stopped `dump-logs` if active.
+
+| Measured Metric (`dumpsys gfxinfo`, 60Hz) | Before Tuning | After `honorplay_smooth` |
+| :--- | :--- | :--- |
+| Settings `DequeueBufferDuration` (per frame) | `5.4–8.0 ms` | **`0.04 ms`** (~150× faster) |
+| Settings Median Frame Time / Jank | `21 ms` / Legacy `98.6%` | **`15 ms` / `0.00%` (Legacy `9.8%`)** |
+| Launcher3 Home Swipe Median / Missed VSync | `25–69 ms` / Frequent drops | **`16 ms` / `0` Missed VSync** |
+
+---
+
+## 8. Post-Boot Notes & Restore Path
 
 - **Offline SetupWizard & Play Store / SIM Hot-Plug Tips**:
   - `LeaOS 21.0` enables `WITH_ADB_INSECURE=true`, so wired ADB works right after first boot.
   - If Google SetupWizard hangs on *"Getting your phone ready..."* in a restricted network, skip Wi-Fi and finish SetupWizard offline, then sideload your proxy tool via `adb install`.
   - For Play Store "Install" button freeze during initial self-update (`adb shell am force-stop com.android.vending`) and EMUI 9.1 Balong baseband SIM hot-plug behavior (reboot once after inserting a SIM card), see Phase 4 of [huawei-enjoy9plus-a14-flash-guide](https://github.com/erha-erha/huawei-enjoy9plus-a14-flash-guide#5-phase-4-first-boot-proxy-setup-play-store-freeze--sim-card-hot-plug-fix).
-- **Re-rooting with Magisk (Optional)**:
-  - Keep the device unrooted until daily functions (calls, Wi-Fi, camera) are verified. If needed later, patch the clean `stock_recovery_ramdisk.img` (or restore your backed-up Magisk-patched `recovery_ramdisk.img`) and remember that on EMUI 9.1, Magisk shares the `recovery_ramdisk` partition with SHRP.
 - **Returning to Stock EMUI `9.1.0.350`**:
   - Flash back your backed-up `system.img` and `stock_recovery_ramdisk.img` (plus `stock_kernel_350.img` if desired) via Fastboot, then Factory Reset in stock Recovery.
   - **Never** `fastboot flash` `oeminfo` or `nvme` — those partitions must only be restored via `dd` from a rooted shell if baseband/IMEI recovery is ever needed.
 
 ---
 
-## 8. Troubleshooting Quick Reference
+## 9. Troubleshooting Quick Reference
 
 | Symptom / Error | Verified Root Cause | Solution |
 | :--- | :--- | :--- |
@@ -231,6 +290,26 @@ Comparing this failure with [Huawei Enjoy 9 Plus (`JKM-AL00b` / Kirin 710)](http
 | `splash2.img` SHA-256 always mismatches during backup | `/splash2` is mounted `rw` as a live ext4 log partition | Normal and expected; ignore mismatch |
 | `adb reboot bootloader` reboots into normal EMUI | EMUI / Magisk `recovery_ramdisk` ignores soft bootloader reboot flag | Unplug USB, power off, hold **Volume Down** while plugging USB into PC |
 | `fastboot devices` empty; Device Manager shows `HI3650` | Prior Zadig/`libwdi` INF (`hi3650.inf`) hijacks `VID_18D1&PID_D00D` without `{F72FE0D4-...}` GUID and locks `USBDevice` class | Admin PowerShell: `pnputil /delete-driver oemXX.inf /uninstall /force` so Windows falls back to inbox `winusb.inf` |
-| Holding Volume Up + Power enters eRecovery instead of SHRP | USB cable was still plugged in | **Unplug USB first**, then hold Volume Up + Power until SHRP loads, then reconnect USB |
+| Holding Volume Up + Power enters eRecovery instead of SHRP / Magisk | USB cable was still plugged in (or Vol Up released too early/late) | **Unplug USB first**; for Magisk release Vol Up the instant `Your device is booting now...` appears; for daily module reloads use **RebootNya → Soft Reboot** |
 | Stuck on LineageOS 3-circle boot animation (> 5 min) | Stock EMUI 9.1 Recovery F2FS format triggers `F2FS-fs (sdd66): Invalid checksum crc` → `/data` unmounted → `credstore` crash loop | Flash `SHRP-Reborn v3.2 charlotte`, run `/system/bin/make_f2fs -f -O encrypt -w 4096 /dev/block/by-name/userdata`, verify `mount -t f2fs`, wipe `/cache`, reboot |
 | SetupWizard stuck on *"Getting your phone ready..."* | Restricted network blocks Google check-in | Skip Wi-Fi to finish offline, sideload proxy via wired ADB, then sign in |
+| Scrolling feels laggy / high touch latency on 60Hz `LeaOS 21.0` | LeaOS `/system/build.prop` sets `hwui.disable_vsync=true`, `use_buffer_age=false`, `egl.profiler=1`, plus conservative Kirin 970 CPU/GPU clocks | Flash `honorplay_smooth-v1.0.0.zip` in Magisk (keeps Huawei HWC 2.2 `disable_backpressure=1` & `latch_unsignaled=1`) |
+| `SurfaceFlinger` crash loop if `debug.sf.use_phase_offsets_as_durations=1` is set | Conflicts with `ro.surface_flinger.vsync_event_phase_offset_ns` in Android 14 `WorkDuration` | Never set `debug.sf.use_phase_offsets_as_durations=1` on LeaOS 21.0 |
+
+---
+
+## 10. Credits, Copyright & Upstream Attribution
+
+All third-party open-source files mirrored in GitHub Releases are **unmodified official upstream builds** provided strictly for community download convenience with full credit to their original authors and licenses. Proprietary apps (e.g., Google Play apps, input methods) are never mirrored here.
+
+| Project / Component | Original Author(s) | Upstream Repository / Link | License |
+| :--- | :--- | :--- | :--- |
+| **LeaOS 21.0 (Android 14 GSI)** & **EMUI 9 F2FS `make_f2fs` Patch** | **[@Iceows](https://github.com/Iceows)** (AltairFR) | [Iceows/huawei-creator](https://github.com/Iceows/huawei-creator) \| [SourceForge](https://sourceforge.net/projects/altairfr-huawei/) | Open Source (LineageOS / Apache-2.0 / GPL) |
+| **SHRP-Reborn v3.2** | **Team SHRP** & **[@Iceows](https://github.com/Iceows)** | [SHRP-Reborn](https://github.com/SHRP-Reborn) \| [SourceForge](https://sourceforge.net/projects/altairfr-huawei/files/SHRP-Recovery/) | GPL-3.0 |
+| **Magisk v30.7** | **[@topjohnwu](https://github.com/topjohnwu)** | [topjohnwu/Magisk](https://github.com/topjohnwu/Magisk) | GPL-3.0 |
+| **LSPosed v1.11.0 (Zygisk)** | **[@JingMatrix](https://github.com/JingMatrix)** & LSPosed Developers | [JingMatrix/Vector](https://github.com/JingMatrix/Vector) | GPL-3.0 |
+| **Frozen 8.3.0 (Runtime Tombstone)** | **[@MoWei-2077](https://github.com/MoWei-2077)** (forked from **[@jark006](https://github.com/jark006)**) | [MoWei-2077/FrozenVS](https://github.com/MoWei-2077/FrozenVS) \| [jark006/freezeitVS](https://github.com/jark006/freezeitVS) | GPL-3.0 |
+| **RebootNya v1.9.0** | **[@daisukiKaffuChino](https://github.com/daisukiKaffuChino)** | [daisukiKaffuChino/RebootNya](https://github.com/daisukiKaffuChino/RebootNya) | Apache-2.0 |
+| **FlClash v0.9.4** | **[@chen08209](https://github.com/chen08209)** | [chen08209/FlClash](https://github.com/chen08209/FlClash) | GPL-3.0 |
+| **Honor Play `9.1.0.350` 212-byte SELinux Kernel Patch** | **[@erha-erha](https://github.com/erha-erha)** | [erha-erha/honor-play-emui9.1-350-selinux-kernel](https://github.com/erha-erha/honor-play-emui9.1-350-selinux-kernel) | Open Source |
+| **Sibling Guide (Huawei Enjoy 9 Plus / Kirin 710)** | **[@erha-erha](https://github.com/erha-erha)** | [erha-erha/huawei-enjoy9plus-a14-flash-guide](https://github.com/erha-erha/huawei-enjoy9plus-a14-flash-guide) | Open Source |
