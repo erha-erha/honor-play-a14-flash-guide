@@ -23,12 +23,14 @@
 
 ## 1. 实测可用软件与镜像清单
 
-| 用途 | 文件 / 工具 | 实测大小 | 目标分区 / 说明 | 公开来源 |
+> **高速镜像下载（GitHub Releases）**：如果 SourceForge 在你所在地区下载限速严重，可直接到本仓库 **[Releases (`v1.0-mirror`)](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/tag/v1.0-mirror)** 下载已校验镜像（含 `SHA256SUMS.txt` 与预解压好的 `recovery.img`）。
+
+| 用途 | 文件 / 工具 | 实测大小 | 目标分区 / 说明 | 公开来源与高速镜像 |
 | :--- | :--- | :--- | :--- | :--- |
-| Android 14 ROM（带 GApps） | `LeaOS-21.0-20260118-iceows-google-pot.img.xz` → `.img` | 压缩包：`1,357,554,880` B<br>解压后：`2,197,798,912` B（~2.05 GiB） | 刷入 `system`（EROFS lz4，轻松塞进 2.77 GiB 的 `system` 分区，余量约 770 MB） | [SourceForge: altairfr-huawei / LeaOS-21.0](https://sourceforge.net/projects/altairfr-huawei/files/LeaOS-21.0/LeaOS-21.0-20260118-iceows-google-pot.img.xz/download) |
-| 第三方 Recovery（麒麟 970 UFS） | `SHRP-Reborn_v3.2_Stable-Unofficial_charlotte-04.02.26.zip` → `recovery.img` | 压缩包：`45,663,147` B<br>`recovery.img`：`27,068,416` B（~25.8 MiB） | 刷入 `recovery_ramdisk`（32 MiB 分区，内置 Iceows 补丁版 `mkfs.f2fs Ver Iceows (Huawei EMUI9): 1.14.0`） | [SourceForge: altairfr-huawei / SHRP-Recovery](https://sourceforge.net/projects/altairfr-huawei/files/SHRP-Recovery/SHRP-Reborn_v3.2_Stable-Unofficial_charlotte-04.02.26.zip/download) |
+| Android 14 ROM（带 GApps） | `LeaOS-21.0-20260118-iceows-google-pot.img.xz` → `.img` | 压缩包：`1,357,554,880` B<br>解压后：`2,197,798,912` B（~2.05 GiB） | 刷入 `system`（EROFS lz4，轻松塞进 2.77 GiB 的 `system` 分区，余量约 770 MB） | [SourceForge](https://sourceforge.net/projects/altairfr-huawei/files/LeaOS-21.0/LeaOS-21.0-20260118-iceows-google-pot.img.xz/download) \| [GitHub 镜像](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.0-mirror/LeaOS-21.0-20260118-iceows-google-pot.img.xz) |
+| 第三方 Recovery（麒麟 970 UFS） | `SHRP-Reborn_v3.2_Stable-Unofficial_charlotte-04.02.26.zip` → `recovery.img` | 压缩包：`45,663,147` B<br>`recovery.img`：`27,068,416` B（~25.8 MiB） | 刷入 `recovery_ramdisk`（32 MiB 分区，内置 Iceows 补丁版 `mkfs.f2fs Ver Iceows (Huawei EMUI9): 1.14.0`） | [SourceForge](https://sourceforge.net/projects/altairfr-huawei/files/SHRP-Recovery/SHRP-Reborn_v3.2_Stable-Unofficial_charlotte-04.02.26.zip/download) \| [GitHub 镜像 (zip)](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.0-mirror/SHRP-Reborn_v3.2_Stable-Unofficial_charlotte-04.02.26.zip) \| [预解压 `.img`](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.0-mirror/SHRP-Reborn_v3.2_charlotte-recovery.img) |
 | 内核 | 原厂 `9.1.0.350` `4.9.148` 内核（带 212 字节 SELinux 解锁补丁） | `25,165,824` B（24 MiB） | 保持原样不重刷，无需另行编译 A14 内核 | [erha-erha/honor-play-emui9.1-350-selinux-kernel](https://github.com/erha-erha/honor-play-emui9.1-350-selinux-kernel) |
-| 刷机工具 | Google `adb` / `fastboot` `37.0.1` | — | 自动将 2.05 GiB 原始镜像切分为 5 个 sparse 分片匹配华为 `max-download-size`（450 MiB） | Android SDK Platform-Tools |
+| 刷机工具 / 备用驱动 | Google `adb` / `fastboot` `37.0.1` + `google_usb_driver.zip` | 驱动包：`8,682,859` B | 自动将 2.05 GiB 原始镜像切分为 5 个 sparse 分片匹配华为 `max-download-size`（450 MiB） | Android SDK Platform-Tools \| [USB 驱动镜像](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.0-mirror/google_usb_driver.zip) |
 
 ### 为什么 `iceows-google-pot.img` 可以直接刷在荣耀 Play（`COR-AL10`）上？
 - Iceows 的 `LeaOS 21.0` 目录只按自己手头主力测试机命名发布了 `-pot`（P Smart 2019）和 `-ane`（P20 Lite），没有单独出 `-cor` 包。
