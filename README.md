@@ -4,7 +4,7 @@
 
 > **Target Device**: Honor Play (`COR-AL10`, device codename `HWCOR`, HiSilicon Kirin 970, `arm64-v8a`, UFS storage, `system = /dev/block/sdd62 / 2.97 GB (2,969,567,232 B)`, `userdata = /dev/block/sdd66 / 112 GB (120,586,240,000 B)`)  
 > **Starting State**: Unlocked Bootloader (`verifiedbootstate=orange`), Stock EMUI `9.1.0.350(C00E440R1P2)` (`Linux 4.9.148`, VNDK 28, EROFS `/` and `/vendor`), Magisk `27.0` in `recovery_ramdisk`, and the stock `9.1.0.350` kernel with the [212-byte SELinux-unlock patch](https://github.com/erha-erha/honor-play-emui9.1-350-selinux-kernel) (boots Enforcing by default).  
-> **Verified Outcome**: **Android 14** (`LeaOS 21.0` Google / LineageOS 21 pre-QPR2, `UQ1A.240205.004`, EROFS) + `SHRP-Reborn v3.2 charlotte` Recovery (Kirin 970 UFS) + stock `9.1.0.350` kernel (no custom-compiled A14 kernel needed) — booted cleanly in **90 seconds** with 112 GB `/data` mounted, plus persistent **Magisk v30.7**, **3 GiB LZ4 ZRAM**, **iOS-style runtime tombstone (`LSPosed v1.11.0 + Frozen 8.3.0`)**, **`RebootNya` soft reboot**, and **Kirin 970 + Mali-G72 60Hz low-latency smoothness tuning (`honorplay_smooth`)**.
+> **Verified Outcome**: **Android 14** (`LeaOS 21.0` Google / LineageOS 21 pre-QPR2, `UQ1A.240205.004`, EROFS) + `SHRP-Reborn v3.2 charlotte` Recovery (Kirin 970 UFS) + stock `9.1.0.350` kernel (no custom-compiled A14 kernel needed) — booted cleanly in **90 seconds** with 112 GB `/data` mounted, plus persistent **Magisk v30.7**, **3 GiB LZ4 ZRAM**, **iOS-style runtime tombstone (`LSPosed v1.11.0 + Frozen 8.3.0`)**, **`RebootNya` soft reboot**, **Kirin 970 + Mali-G72 60Hz low-latency smoothness tuning (`honorplay_smooth`)**, **Camera Scudo crash fix (`honorplay_camera_fix`)**, and **permanent wired USB ADB self-healing (`huawei_usb_adb_fix v1.2.0`)**.
 
 ---
 
@@ -16,7 +16,7 @@
 - [4. Phase 3: Flashing Android 14 & SHRP (`charlotte`)](#4-phase-3-flashing-android-14--shrp-charlotte)
 - [5. Phase 4: Root-Cause Analysis of the 3-Circle Boot Hang (Cross-Device EMUI 9.1 F2FS Issue)](#5-phase-4-root-cause-analysis-of-the-3-circle-boot-hang-cross-device-emui-91-f2fs-issue)
 - [6. Phase 5: Proper `/data` Formatting in SHRP & First Boot Verification](#6-phase-5-proper-data-formatting-in-shrp--first-boot-verification)
-- [7. Phase 6: Post-Flash Optimization (Magisk v30.7, 3 GiB ZRAM, True Tombstone & 60Hz Smoothness)](#7-phase-6-post-flash-optimization-magisk-v307-3-gib-zram-true-tombstone--60hz-smoothness)
+- [7. Phase 6: Post-Flash Optimization, Camera Fix & Permanent Wired USB ADB](#7-phase-6-post-flash-optimization-camera-fix--permanent-wired-usb-adb)
 - [8. Post-Boot Notes & Restore Path](#8-post-boot-notes--restore-path)
 - [9. Troubleshooting Quick Reference](#9-troubleshooting-quick-reference)
 - [10. Credits, Copyright & Upstream Attribution](#10-credits-copyright--upstream-attribution)
@@ -28,7 +28,8 @@
 > **Fast Download Mirrors (GitHub Releases)**:
 > - **Core ROM & Recovery Pack**: **[Releases (`v1.0-mirror`)](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/tag/v1.0-mirror)** (`LeaOS 21.0`, `SHRP charlotte`, USB driver, `SHA256SUMS.txt`).
 > - **Root, ZRAM, Tombstone & Smoothness Pack (Honor Play / Kirin 970 ONLY)**: **[Releases (`v1.1-optimization`)](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/tag/v1.1-optimization)** (`honorplay_smooth`, `honorplay_zram3g`, `COR-AL10 9.1.0.350` Magisk v30.7 recovery image, plus GPLv3/Apache-2.0 upstream mirrors).
-> - **⚠️ Hardware Separation Warning**: All modules in this repo target **Honor Play (`COR-AL10` / Kirin 970 / Mali-G72 / 6 GB RAM)** ONLY. For **Huawei Enjoy 9 Plus (Kirin 710 / Mali-G51 / 4 GB RAM)**, use the separate repo [huawei-enjoy9plus-a14-flash-guide](https://github.com/erha-erha/huawei-enjoy9plus-a14-flash-guide). Both custom modules include an automatic `ro.hardware` check in `customize.sh` to prevent accidental cross-flashing.
+> - **Camera Scudo Fix & Permanent Wired USB ADB Pack**: **[Releases (`v1.2-camera-usb-fix`)](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/tag/v1.2-camera-usb-fix)** (`honorplay_camera_fix-v1.0.0.zip` [Kirin 970 ONLY] + `huawei_usb_adb_fix-v1.2.0.zip` [EMUI 9.1 Kirin 970/710 generic] + `SHA256SUMS.txt`).
+> - **⚠️ Hardware Separation Warning**: Device-specific modules (`honorplay_smooth`, `honorplay_zram3g`, `honorplay_camera_fix`) target **Honor Play (`COR-AL10` / Kirin 970 / Mali-G72 / 6 GB RAM)** ONLY and enforce `ro.hardware == kirin970` in `customize.sh`. Only `huawei_usb_adb_fix` is a shared EMUI 9.1 ConfigFS/FunctionFS fix verified on both Kirin 970 and Kirin 710. For **Huawei Enjoy 9 Plus (Kirin 710 / Mali-G51 / 4 GB RAM)**, use the separate repo [huawei-enjoy9plus-a14-flash-guide](https://github.com/erha-erha/huawei-enjoy9plus-a14-flash-guide).
 
 | Role | Artifact / Tool | Verified Size | Target Partition / Notes | Upstream Source & Fast Mirror |
 | :--- | :--- | :--- | :--- | :--- |
@@ -38,6 +39,8 @@
 | Magisk Root (EMUI 9.1 `9.1.0.350`) | `Magisk-v30.7.apk` & `COR-AL10_9.1.0.350_recovery_ramdisk_magisk307.img` | APK: `11.6 MB`<br>Image: `33,554,432` B | Flash patched image to `recovery_ramdisk` (**ONLY** for `COR-AL10 9.1.0.350`, `RECOVERYMODE=true`, `PREINITDEVICE=cache`) | [@topjohnwu/Magisk](https://github.com/topjohnwu/Magisk/releases) \| [v1.1 APK](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.1-optimization/Magisk-v30.7.apk) \| [v1.1 `.img`](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.1-optimization/COR-AL10_9.1.0.350_recovery_ramdisk_magisk307.img) |
 | 60Hz Smoothness Module (Kirin 970) | `honorplay_smooth-v1.0.0.zip` ([source](modules/honorplay_smooth/)) | `2,568` B | Flash in Magisk Manager; fixes LeaOS HWUI/VSync lag + Kirin 970 CPU/Mali-G72 tuning | [v1.1 Release](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.1-optimization/honorplay_smooth-v1.0.0.zip) |
 | 3 GiB LZ4 ZRAM Module (6 GB RAM) | `honorplay_zram3g-v1.0.0.zip` ([source](modules/honorplay_zram3g/)) | `1,630` B | Flash in Magisk Manager; auto-enables 3 GiB LZ4 ZRAM on every Magisk boot | [v1.1 Release](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.1-optimization/honorplay_zram3g-v1.0.0.zip) |
+| Camera Scudo Crash Fix (Kirin 970 ONLY) | `honorplay_camera_fix-v1.0.0.zip` ([source](modules/honorplay_camera_fix/)) | `2,448` B | Flash in Magisk Manager; patches local `/odm/etc/camera/ippalgoconfig.xml` (`SmartAE switcher="0"`) to stop `libSmartAE.so` Scudo `SIGSEGV` (zero Huawei binaries bundled) | [v1.2 Release](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.2-camera-usb-fix/honorplay_camera_fix-v1.0.0.zip) |
+| Permanent Wired USB ADB Fix (Kirin 970/710) | `huawei_usb_adb_fix-v1.2.0.zip` ([source](modules/huawei_usb_adb_fix/)) | `3,811` B | Flash in Magisk Manager; overrides `manufacture,adb` and runs 0% idle CPU event-driven self-healing for `FUNCTIONFS_BIND` / `EBUSY` / `-12 ENOMEM` deadlocks | [v1.2 Release](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.2-camera-usb-fix/huawei_usb_adb_fix-v1.2.0.zip) |
 | LSPosed Framework (Zygisk) | `LSPosed-v1.11.0-7209-zygisk-release.zip` | `6.79 MB` | Required for Frozen System Framework Hook (Android 14 API 34) | [@JingMatrix/Vector (LSPosed)](https://github.com/JingMatrix/Vector/releases) \| [v1.1 Mirror](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.1-optimization/LSPosed-v1.11.0-7209-zygisk-release.zip) |
 | True Runtime Tombstone | `Frozen8.3.0.zip` | `3.04 MB` | iOS-style background suspension (`GLOBAL_SIGSTOP`, works on Linux `4.9.148` + A14) | [@MoWei-2077/FrozenVS](https://github.com/MoWei-2077/FrozenVS) \| [v1.1 Mirror](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.1-optimization/Frozen8.3.0.zip) |
 | Open-Source Reboot Tool | `RebootNya_1.9.0.apk` | `3.01 MB` | One-tap **Soft Reboot** (`setprop ctl.restart zygote`) without unplugging USB or losing Magisk | [@daisukiKaffuChino/RebootNya](https://github.com/daisukiKaffuChino/RebootNya/releases) \| [v1.1 Mirror](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.1-optimization/RebootNya_1.9.0.apk) |
@@ -221,7 +224,7 @@ Comparing this failure with [Huawei Enjoy 9 Plus (`JKM-AL00b` / Kirin 710)](http
 
 ---
 
-## 7. Phase 6: Post-Flash Optimization (Magisk v30.7, 3 GiB ZRAM, True Tombstone & 60Hz Smoothness)
+## 7. Phase 6: Post-Flash Optimization, Camera Fix & Permanent Wired USB ADB
 
 ### 7.1 Magisk v30.7 (`recovery_ramdisk`) & EMUI 9.1 Boot / Soft-Reboot Workflow
 - **Flashing Magisk v30.7**: Because EMUI 9.1 has no standalone `boot` ramdisk, Magisk patches `recovery_ramdisk` with `RECOVERYMODE=true`, `KEEPVERITY=true`, `KEEPFORCEENCRYPT=true`, and `PREINITDEVICE=cache` (this overwrites SHRP; re-flash SHRP anytime via Fastboot if needed).
@@ -268,6 +271,40 @@ Comparing this failure with [Huawei Enjoy 9 Plus (`JKM-AL00b` / Kirin 710)](http
 | Settings Median Frame Time / Jank | `21 ms` / Legacy `98.6%` | **`15 ms` / `0.00%` (Legacy `9.8%`)** |
 | Launcher3 Home Swipe Median / Missed VSync | `25–69 ms` / Frequent drops | **`16 ms` / `0` Missed VSync** |
 
+### 7.5 Camera Scudo Crash Fix (`honorplay_camera_fix` — Kirin 970 ONLY) & Full Hardware Audit
+- **Symptom**: On Honor Play (`COR-AL10`) running `LeaOS 21.0` (Android 14), LineageOS **Aperture** fails to connect or shows a black viewfinder, while **GCam Go** (`com.google.android.apps.cameralite`) displays a frozen slideshow (~1 frame every few seconds).
+- **Verified Root Cause (Tombstones + `/vendor/lib64/libSmartAE.so` Disassembly)**:
+  - `initSmartAEAlgo` (`+0x154ec`) allocates `0x77a00` bytes (`489,984 B`), while `SmartAE::Init` (`+0x13610`) executes `str wzr, [x20, #0xa00]` at `this + 0x77a00` — a **4-byte heap buffer overflow**.
+  - On stock EMUI 9.1 (`jemalloc`), `0x77a00` rounded up to a `512 KiB` (`0x80000`) size class, silently absorbing the out-of-bounds write.
+  - On Android 14 **Scudo**'s secondary allocator, the buffer is right-aligned against a `PROT_NONE` guard page, causing an immediate `SIGSEGV (SEGV_ACCERR)` inside `CameraDaemon` on frame 1 and triggering an endless ~5-second crash-and-respawn loop.
+- **Why Disabling `SmartAE` Beats Binary-Patching `libSmartAE.so`**:
+  - A/B testing an 8-byte binary patch (`0x77a00 → 0x80000`) stopped the crash, but `IppAlgoSmartAE` still spammed `doSmartAEAlgo() failed to getSceneMode` every 50 ms under AOSP because Huawei's proprietary scene-mode metadata is absent in LineageOS.
+  - [`honorplay_camera_fix-v1.0.0.zip`](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.2-camera-usb-fix/honorplay_camera_fix-v1.0.0.zip) ([source](modules/honorplay_camera_fix/)) instead sets `<IppAlgo name="SmartAE" switcher="0"` in a locally generated copy of the device's own `/odm/etc/camera/ippalgoconfig.xml` and bind-mounts it in `post-fs-data.sh` (with `service.sh` fallback and `u:object_r:vendor_configs_file:s0` SELinux context preserved, because `/odm` is a standalone EROFS partition with no `/system/odm` symlink). Result: **zero crashes, zero log spam, ~512 KiB saved per session, and zero Huawei proprietary binaries/XMLs redistributed**.
+- **Live Camera & Full Hardware Audit (`COR-AL10` / Kirin 970 on `LeaOS 21.0` + Stock `9.1.0.350` Kernel, Enforcing)**:
+
+| Subsystem | Live Verification Result | Notes |
+| :--- | :--- | :--- |
+| **SoC / RAM / UFS** | Working | Kirin 970 (`4×A53 + 4×A73`), 6 GB RAM + 3 GiB LZ4 ZRAM, 128 GB UFS 2.1 |
+| **Display / Touch / Backlight** | Working | 60.00 Hz LCD, smooth brightness, tuned via `honorplay_smooth` |
+| **Rear & Front Cameras + Torch** | Working | Aperture & GCam Go live preview, photo capture (2.4–7.6 MB), rear/front HW H.264 video (`vide`+`soun`), portrait, night mode, torch (`0→128→0`); **0 crashes / 0 SELinux AVC denials** with `honorplay_camera_fix-v1.0.0.zip` |
+| **HW Video Codecs** | Working | `OMX.hisi.video.decoder/encoder` (AVC / HEVC) active |
+| **Audio / Mic / 3.5 mm Jack** | Working | `HI6403` speaker, earpiece, mic, 3.5 mm jack verified |
+| **Wi-Fi (2.4/5 GHz) & Bluetooth** | Working | `hi1102` 5 GHz Wi-Fi verified (~292 Mbps link, 0% packet loss); BT A2DP / HFP / BLE ready |
+| **Cellular / GNSS / Fingerprint** | Working | Dual-SIM Balong baseband (`21C20B369S016C000`) & RIL HAL ready (reboot once after inserting SIM; no hot-plug), GNSS HAL ready, `Fingerprint21` HAL ready |
+| **Sensors / Vibrator / RGB LED / USB** | Working | `lsm6ds3-c` accel/gyro, `akm09918` mag, `ltr578` light/proximity, hall & step sensors, vibrator, RGB notification LED, charging & wired USB ADB (protected by `huawei_usb_adb_fix-v1.2.0.zip`) |
+| **NFC / IR Blaster** | N/A | Hardware absent on `COR-AL10` (`ro.config.nfcdisabled=true`) |
+
+### 7.6 Permanent Wired USB ADB Self-Healing Fix (`huawei_usb_adb_fix v1.2.0`)
+- **Symptom**: After unplugging/replugging, deep sleep, or switching between two Huawei/Honor EMUI 9.1 phones on the same PC, wired USB debugging vanishes completely — Windows Device Manager shows zero `VID_12D1` devices and the phone only charges (even though Wireless Debugging still works). This is **NOT** a Windows multi-device driver conflict.
+- **Verified 3-Layer Phone-Side Root Cause (Shared on Both Kirin 970 & Kirin 710 EMUI 9.1 + `LeaOS 21.0`)**:
+  1. **Invalid Vendor Default**: `/vendor/default.prop` hardcodes `persist.sys.usb.config=manufacture,adb`, which has no matching `on property:` rule in LeaOS `init.usb.configfs.rc` or `init.hisi.usb.rc`.
+  2. **Android 14 `adbd` ↔ Linux 4.9 `f_fs.c` `FUNCTIONFS_BIND` / `EBUSY` Deadlock**: Android 14 APEX `/apex/com.android.adbd/bin/adbd` hardcodes a 1-second `FUNCTIONFS_BIND` timeout (`timed out while waiting for FUNCTIONFS_BIND, trying again`, no disable prop). When unplug/replug or sleep causes `adbd` to reopen `ep0` while `/config/usb_gadget/g1/UDC` is still `ff100000.dwc3`, `init`'s UDC rewrite fails with `EBUSY` and Linux 4.9 `f_fs.c` never re-emits `FUNCTIONFS_BIND`, locking `adbd` into an infinite 1-second loop that drops USB D+ pull-up.
+  3. **Poisoned `ffs.adb` → `-12 ENOMEM`**: Once looped, Linux 4.9's `ffs.adb` ConfigFS instance fails even standard `sys.usb.config none → adb` with `configfs-gadget ff100000.dwc3: failed to start g1: -12 (Out of memory)` until `/dev/usb-ffs/adb` is unmounted, `ffs.adb` is removed & recreated, and `functionfs` is remounted.
+- **Permanent Fix ([`huawei_usb_adb_fix-v1.2.0.zip`](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.2-camera-usb-fix/huawei_usb_adb_fix-v1.2.0.zip) / [source](modules/huawei_usb_adb_fix/))**:
+  - `system.prop` overrides `persist.sys.usb.config=adb`.
+  - `usb_adb_guard.sh` runs a **0% idle CPU** event-driven watcher (`logcat -b main -T 1 -v epoch adbd:W '*:S'`), filters stale log lines by epoch timestamp, **skips recovery whenever UDC is already `configured`** (zero disruption to active transfers), checks `/proc/mounts` directly (never bare `mount`, which spins at 99% CPU on Magisk's mount table), cleanly tears down and rebuilds `ffs.adb`, and restores the user's active USB mode (`adb`, `mtp,adb`, etc.).
+  - **Live Verified on Both Devices**: Confirmed 0% idle CPU and safe guard-skip when healthy on Honor Play, and confirmed automatic end-to-end recovery (~12 seconds from live broken `FUNCTIONFS_BIND`/`EBUSY` deadlock to automatic Windows `USB\VID_12D1&PID_103A` re-enumeration) on Enjoy 9 Plus.
+
 ---
 
 ## 8. Post-Boot Notes & Restore Path
@@ -295,6 +332,8 @@ Comparing this failure with [Huawei Enjoy 9 Plus (`JKM-AL00b` / Kirin 710)](http
 | SetupWizard stuck on *"Getting your phone ready..."* | Restricted network blocks Google check-in | Skip Wi-Fi to finish offline, sideload proxy via wired ADB, then sign in |
 | Scrolling feels laggy / high touch latency on 60Hz `LeaOS 21.0` | LeaOS `/system/build.prop` sets `hwui.disable_vsync=true`, `use_buffer_age=false`, `egl.profiler=1`, plus conservative Kirin 970 CPU/GPU clocks | Flash `honorplay_smooth-v1.0.0.zip` in Magisk (keeps Huawei HWC 2.2 `disable_backpressure=1` & `latch_unsignaled=1`) |
 | `SurfaceFlinger` crash loop if `debug.sf.use_phase_offsets_as_durations=1` is set | Conflicts with `ro.surface_flinger.vsync_event_phase_offset_ns` in Android 14 `WorkDuration` | Never set `debug.sf.use_phase_offsets_as_durations=1` on LeaOS 21.0 |
+| Aperture black screen / GCam Go slideshow (~1 FPS) on `COR-AL10` | `libSmartAE.so` `SmartAE::Init +0x77a00` 4-byte heap overflow hits Android 14 Scudo guard page (`SIGSEGV`), crash-looping `CameraDaemon` every ~5s | Flash `honorplay_camera_fix-v1.0.0.zip` in Magisk (Kirin 970 ONLY; disables `SmartAE` in local `/odm/etc/camera/ippalgoconfig.xml`) |
+| Wired USB debugging vanishes (charges only; PC sees zero `VID_12D1` devices) | `/vendor/default.prop` `manufacture,adb` + Android 14 `adbd` ↔ Linux 4.9 `FUNCTIONFS_BIND` / `EBUSY` / `ffs.adb -12 ENOMEM` deadlock (not a Windows driver conflict) | Flash `huawei_usb_adb_fix-v1.2.0.zip` in Magisk for permanent 0% CPU self-healing |
 
 ---
 

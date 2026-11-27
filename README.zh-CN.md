@@ -4,7 +4,7 @@
 
 > **目标设备**：荣耀 Play 国行高配版（型号 `COR-AL10`，设备代号 `HWCOR`，SoC：海思麒麟 970，`arm64-v8a`，UFS 存储，`system = /dev/block/sdd62 / 2.97 GB (2,969,567,232 B)`，`userdata = /dev/block/sdd66 / 112 GB (120,586,240,000 B)`）  
 > **起始状态**：Bootloader 已解锁（`verifiedbootstate=orange`），原厂 EMUI `9.1.0.350(C00E440R1P2)`（`Linux 4.9.148`，VNDK 28，`/` 与 `/vendor` 均为 EROFS），`recovery_ramdisk` 内已刷 Magisk `27.0`，`kernel` 为带 [212 字节 SELinux 解锁补丁](https://github.com/erha-erha/honor-play-emui9.1-350-selinux-kernel) 的原厂 `9.1.0.350` 内核（开机默认 Enforcing）。  
-> **最终成果**：成功刷入 **Android 14**（`LeaOS 21.0` Google 版 / LineageOS 21 pre-QPR2，`UQ1A.240205.004`，EROFS）+ 麒麟 970 同平台 `SHRP-Reborn v3.2 charlotte` Recovery + 保留原厂 `9.1.0.350` 内核（无需另编 A14 内核）—— **90 秒直接点亮进桌面**，并完成常驻 **`Magisk v30.7`**、开机自启 **3 GiB LZ4 ZRAM**、**iOS 式运行态真墓碑（`LSPosed v1.11.0 + Frozen 8.3.0`）**、**`RebootNya` 免按键软重启** 及 **麒麟 970 + Mali-G72 60Hz 低延迟流畅度专项优化（`honorplay_smooth`）**。
+> **最终成果**：成功刷入 **Android 14**（`LeaOS 21.0` Google 版 / LineageOS 21 pre-QPR2，`UQ1A.240205.004`，EROFS）+ 麒麟 970 同平台 `SHRP-Reborn v3.2 charlotte` Recovery + 保留原厂 `9.1.0.350` 内核（无需另编 A14 内核）—— **90 秒直接点亮进桌面**，并完成常驻 **`Magisk v30.7`**、开机自启 **3 GiB LZ4 ZRAM**、**iOS 式运行态真墓碑（`LSPosed v1.11.0 + Frozen 8.3.0`）**、**`RebootNya` 免按键软重启**、**麒麟 970 + Mali-G72 60Hz 低延迟流畅度专项优化（`honorplay_smooth`）**、**相机 Scudo 闪退根治（`honorplay_camera_fix`）** 与 **有线 USB 调试永久自愈（`huawei_usb_adb_fix v1.2.0`）**。
 
 ---
 
@@ -16,7 +16,7 @@
 - [4. 阶段三：Fastboot 刷入 Android 14 与 `charlotte` 版 SHRP](#4-阶段三fastboot-刷入-android-14-与-charlotte-版-shrp)
 - [5. 阶段四：核心复盘——为什么卡在 LineageOS 三个转圈（EMUI 9.1 跨机型 F2FS 通病）](#5-阶段四核心复盘为什么卡在-lineageos-三个转圈emui-91-跨机型-f2fs-通病)
 - [6. 阶段五：在 SHRP 内正确重格 `/data` 与 90 秒开机验证](#6-阶段五在-shrp-内正确重格-data-与-90-秒开机验证)
-- [7. 阶段六：刷后深度优化（Magisk v30.7、3 GiB ZRAM、真墓碑与 60Hz 流畅度调优）](#7-阶段六刷后深度优化magisk-v3073-gib-zram真墓碑与-60hz-流畅度调优)
+- [7. 阶段六：刷后深度优化、相机闪退修复与有线 USB 调试永久自愈](#7-阶段六刷后深度优化相机闪退修复与有线-usb-调试永久自愈)
 - [8. 开机后续事项与救砖回退方案](#8-开机后续事项与救砖回退方案)
 - [9. 踩坑速查表](#9-踩坑速查表)
 - [10. 致谢、版权声明与原作者署名](#10-致谢版权声明与原作者署名)
@@ -28,7 +28,8 @@
 > **高速镜像下载（GitHub Releases）**：
 > - **基础刷机包**：**[Releases (`v1.0-mirror`)](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/tag/v1.0-mirror)**（含 `LeaOS 21.0`、`SHRP charlotte`、USB 驱动与 `SHA256SUMS.txt`）。
 > - **Root / ZRAM / 真墓碑 / 流畅度优化包（仅限荣耀 Play / 麒麟 970）**：**[Releases (`v1.1-optimization`)](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/tag/v1.1-optimization)**（含本机专用 `honorplay_smooth`、`honorplay_zram3g`、`COR-AL10 9.1.0.350` Magisk v30.7 修补镜像，以及 GPLv3/Apache-2.0 开源上游工具镜像）。
-> - **⚠️ 机型严格隔离提示**：本仓库模块仅适用于 **荣耀 Play（`COR-AL10` / 麒麟 970 / Mali-G72 / 6GB 内存）**；**华为畅享 9 Plus（麒麟 710 / Mali-G51 / 4GB 内存）** 请前往独立仓库 [huawei-enjoy9plus-a14-flash-guide](https://github.com/erha-erha/huawei-enjoy9plus-a14-flash-guide)。两机专属模块均在 `customize.sh` 中内置了 `ro.hardware` 校验，防止误刷混用。
+> - **相机 Scudo 闪退修复与有线 USB 调试永久自愈包**：**[Releases (`v1.2-camera-usb-fix`)](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/tag/v1.2-camera-usb-fix)**（含本机专用 `honorplay_camera_fix-v1.0.0.zip` [仅限麒麟 970] + 通用 `huawei_usb_adb_fix-v1.2.0.zip` [EMUI 9.1 麒麟 970/710 通用] 与 `SHA256SUMS.txt`）。
+> - **⚠️ 机型严格隔离提示**：机型专属模块（`honorplay_smooth`、`honorplay_zram3g`、`honorplay_camera_fix`）**仅适用于荣耀 Play（`COR-AL10` / 麒麟 970 / Mali-G72 / 6GB 内存）**，且均在 `customize.sh` 中内置了 `ro.hardware == kirin970` 防刷错校验。仅 `huawei_usb_adb_fix` 为 EMUI 9.1 通用 ConfigFS/FunctionFS 修复模块（已在麒麟 970 与麒麟 710 双机实测通过）。**华为畅享 9 Plus（麒麟 710 / Mali-G51 / 4GB 内存）** 请前往独立仓库 [huawei-enjoy9plus-a14-flash-guide](https://github.com/erha-erha/huawei-enjoy9plus-a14-flash-guide)。
 
 | 用途 | 文件 / 工具 | 实测大小 | 目标分区 / 说明 | 原作者上游与高速镜像 |
 | :--- | :--- | :--- | :--- | :--- |
@@ -38,6 +39,8 @@
 | Magisk Root（EMUI `9.1.0.350`） | `Magisk-v30.7.apk` 与 `COR-AL10_9.1.0.350_recovery_ramdisk_magisk307.img` | APK：`11.6 MB`<br>镜像：`33,554,432` B | 刷入 `recovery_ramdisk`（**仅限 `COR-AL10 9.1.0.350`**，`RECOVERYMODE=true`，`PREINITDEVICE=cache`） | [@topjohnwu/Magisk](https://github.com/topjohnwu/Magisk/releases) \| [v1.1 APK](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.1-optimization/Magisk-v30.7.apk) \| [v1.1 `.img`](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.1-optimization/COR-AL10_9.1.0.350_recovery_ramdisk_magisk307.img) |
 | 60Hz 流畅度模块（麒麟 970 专用） | `honorplay_smooth-v1.0.0.zip`（[源码](modules/honorplay_smooth/)） | `2,568` B | Magisk 内直刷；修复 LeaOS 图形卡顿 + 麒麟 970 CPU/Mali-G72 调优 | [v1.1 下载](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.1-optimization/honorplay_smooth-v1.0.0.zip) |
 | 3 GiB LZ4 ZRAM 模块（6GB 内存） | `honorplay_zram3g-v1.0.0.zip`（[源码](modules/honorplay_zram3g/)） | `1,630` B | Magisk 内直刷；每次带 Root 开机自动挂载 3 GiB LZ4 ZRAM | [v1.1 下载](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.1-optimization/honorplay_zram3g-v1.0.0.zip) |
+| 相机 Scudo 闪退修复（仅限麒麟 970） | `honorplay_camera_fix-v1.0.0.zip`（[源码](modules/honorplay_camera_fix/)） | `2,448` B | Magisk 内直刷；开机自动从本机 `/odm/etc/camera/ippalgoconfig.xml` 生成补丁关闭 `SmartAE` 根治 `libSmartAE.so` 崩溃（零华为闭源文件分发） | [v1.2 下载](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.2-camera-usb-fix/honorplay_camera_fix-v1.0.0.zip) |
+| 有线 USB 调试永久自愈（麒麟 970/710） | `huawei_usb_adb_fix-v1.2.0.zip`（[源码](modules/huawei_usb_adb_fix/)） | `3,811` B | Magisk 内直刷；覆盖 `manufacture,adb` 并以 0% 待机 CPU 事件监听自动自愈 `FUNCTIONFS_BIND` / `EBUSY` / `-12 ENOMEM` 死锁 | [v1.2 下载](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.2-camera-usb-fix/huawei_usb_adb_fix-v1.2.0.zip) |
 | LSPosed 框架（Zygisk 版） | `LSPosed-v1.11.0-7209-zygisk-release.zip` | `6.79 MB` | 为 `Frozen` 提供 Android 14 系统框架 Hook | [@JingMatrix/Vector (LSPosed)](https://github.com/JingMatrix/Vector/releases) \| [v1.1 镜像](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.1-optimization/LSPosed-v1.11.0-7209-zygisk-release.zip) |
 | 运行态真墓碑模块 | `Frozen8.3.0.zip` | `3.04 MB` | 类 iOS 后台挂起（`GLOBAL_SIGSTOP`，支持 `4.9.148` 内核 + A14） | [@MoWei-2077/FrozenVS](https://github.com/MoWei-2077/FrozenVS) \| [v1.1 镜像](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.1-optimization/Frozen8.3.0.zip) |
 | 开源免按键重启工具 | `RebootNya_1.9.0.apk` | `3.01 MB` | 一键**软重启**（`setprop ctl.restart zygote`），免拔线免按键保留 Magisk | [@daisukiKaffuChino/RebootNya](https://github.com/daisukiKaffuChino/RebootNya/releases) \| [v1.1 镜像](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.1-optimization/RebootNya_1.9.0.apk) |
@@ -219,7 +222,7 @@ cp /dev/block/by-name/recovery_ramdisk ./patched.img
 
 ---
 
-## 7. 阶段六：刷后深度优化（Magisk v30.7、3 GiB ZRAM、真墓碑与 60Hz 流畅度调优）
+## 7. 阶段六：刷后深度优化、相机闪退修复与有线 USB 调试永久自愈
 
 ### 7.1 Magisk v30.7（`recovery_ramdisk`）与 EMUI 9.1 带 Root 开机 / 免按键软重启
 - **刷入 Magisk v30.7**：EMUI 9.1 无独立 `boot` ramdisk，Magisk 需以 `RECOVERYMODE=true`、`KEEPVERITY=true`、`KEEPFORCEENCRYPT=true`、`PREINITDEVICE=cache` 修补原厂 `recovery_ramdisk` 后刷入（会覆盖 SHRP，日后随时可用 Fastboot 刷回 SHRP）：
@@ -265,6 +268,40 @@ cp /dev/block/by-name/recovery_ramdisk ./patched.img
 | 设置页中位帧耗时 / 掉帧率 | `21 ms` / 旧版 `98.6%` | **`15 ms` / `0.00%`（旧版 `9.8%`）** |
 | 桌面滑动中位帧耗时 / 丢帧数 | `25–69 ms` / 频繁丢帧 | **`16 ms` / `0` 丢帧** |
 
+### 7.5 相机闪退/卡顿修复（`honorplay_camera_fix` — 仅限麒麟 970）与全硬件实测清单
+- **故障现象**：荣耀 Play（`COR-AL10`）刷完 `LeaOS 21.0`（Android 14）后，系统自带 LineageOS 相机（Aperture）无法连接或黑屏；谷歌相机精简版（GCam Go / `com.google.android.apps.cameralite`）虽然能出画面但极卡，像几秒一张的 PPT 截图。
+- **实测根因（崩溃墓碑 + `/vendor/lib64/libSmartAE.so` 反汇编定位）**：
+  - `initSmartAEAlgo`（`+0x154ec`）仅申请了 `0x77a00` 字节（`489,984 B`），但 `SmartAE::Init`（`+0x13610`）执行 `str wzr, [x20, #0xa00]` 写入了 `this + 0x77a00` 处——这是一个**原厂闭源库里潜伏多年的 4 字节堆溢出**。
+  - 在 EMUI 9.1 的 `jemalloc` 分配器下，`0x77a00` 会向上对齐到 `512 KiB`（`0x80000`）内存档位，越界写入被静默吞掉；
+  - 升级 Android 14 后系统换用 **Scudo** 安全分配器，该内存块右对齐紧贴 `PROT_NONE` 保护页，首帧初始化立刻触发 `SIGSEGV (SEGV_ACCERR)`，导致 `CameraDaemon` 每 5 秒崩溃重启一次（Aperture 报错退出，GCam Go 每重连一次只出一两帧截图）。
+- **为什么关闭 `SmartAE` 比二进制打补丁更干净**：
+  - A/B 实测对 `libSmartAE.so` 打 8 字节扩容补丁（`0x77a00 → 0x80000`）虽能止崩，但 `IppAlgoSmartAE` 在类原生 AOSP 下缺少华为私有场景元数据，仍会每 50ms 刷屏报错 `doSmartAEAlgo() failed to getSceneMode`。
+  - [`honorplay_camera_fix-v1.0.0.zip`](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.2-camera-usb-fix/honorplay_camera_fix-v1.0.0.zip)（[源码](modules/honorplay_camera_fix/)）在开机 `post-fs-data.sh` 阶段从本机原厂 `/odm/etc/camera/ippalgoconfig.xml` 本地生成副本并将 `SmartAE` 的 `switcher="1"` 改为 `"0"`，保留 `u:object_r:vendor_configs_file:s0` 上下文后直接 bind-mount 覆盖（因 `/odm` 为独立 EROFS 分区且无 `/system/odm` 软链，必须走 bind-mount，并配 `service.sh` 兜底）。结果：**零崩溃、零日志刷屏、每次开相机省 512 KiB 内存，且仓库与压缩包内不含任何华为闭源二进制或 XML 文件**。
+- **全硬件实测矩阵（`COR-AL10` / 麒麟 970 + `LeaOS 21.0` + 原厂 `9.1.0.350` 内核 Enforcing）**：
+
+| 硬件子系统 | 实测状态 | 实测详情 |
+| :--- | :--- | :--- |
+| **SoC / 内存 / UFS 闪存** | 正常 | 麒麟 970（`4×A53 + 4×A73`）、6GB 内存 + 3 GiB LZ4 ZRAM、128GB UFS 2.1 |
+| **屏幕 / 触控 / 背光** | 正常 | 60.00 Hz LCD、触控与亮度平滑，配合 `honorplay_smooth` 满帧低延迟 |
+| **前后双摄与闪光灯** | 正常 | 刷入 `honorplay_camera_fix-v1.0.0.zip` 后，Aperture 与 GCam Go 前后预览、拍照（2.4–7.6 MB）、前后硬件 H.264 录像（音画同步）、人像、夜景、手电筒（`0→128→0`）全通过，**零崩溃、零 SELinux AVC 拒绝** |
+| **硬件视频编解码** | 正常 | `OMX.hisi.video.decoder/encoder`（AVC / HEVC）工作正常 |
+| **音频 / 麦克风 / 3.5mm 耳机孔** | 正常 | `HI6403` 扬声器、听筒、麦克风、3.5mm 耳机孔均正常 |
+| **Wi-Fi（2.4/5GHz）与蓝牙** | 正常 | `hi1102` 5GHz Wi-Fi 实测 292 Mbps / 0% 丢包；蓝牙 A2DP / HFP / BLE 就绪 |
+| **蜂窝基带 / GPS / 指纹** | 正常 | 双卡巴龙基带（`21C20B369S016C000`）与 RIL HAL 就绪（插 SIM 卡后重启一次即可，不支持热插拔）；GNSS HAL 与 `Fingerprint21` HAL 就绪 |
+| **传感器 / 震动 / RGB 呼吸灯 / USB** | 正常 | `lsm6ds3-c` 加速度/陀螺仪、`akm09918` 磁力计、`ltr578` 光距感、霍尔/计步、震动马达、RGB 通知灯、充电与有线 ADB（配合 `huawei_usb_adb_fix-v1.2.0.zip`） |
+| **NFC / 红外遥控** | 无此硬件 | `COR-AL10` 出厂无 NFC / 红外发射器（`ro.config.nfcdisabled=true`） |
+
+### 7.6 有线 USB 调试永久自愈方案（`huawei_usb_adb_fix v1.2.0`）
+- **故障现象**：拔插数据线、长时间休眠，或在电脑上切换荣耀 Play 与畅享 9 Plus 两台华为/荣耀手机后，其中一台突然开启 USB 调试却完全无法被电脑识别（设备管理器连 `VID_12D1` 设备都不出现，仅显示充电），而无线调试正常。**经实测排查，这并非 Windows 多机驱动冲突！**
+- **三层叠加根因（麒麟 970 与麒麟 710 EMUI 9.1 + `LeaOS 21.0` 完全一致）**：
+  1. **原厂 `/vendor/default.prop` 默认值失效**：华为原厂写死了 `persist.sys.usb.config=manufacture,adb`，但 LeaOS 的 `init.usb.configfs.rc` 与 `init.hisi.usb.rc` 中均无对应触发规则。
+  2. **Android 14 `adbd` 与 Linux 4.9 `f_fs.c` 的 `FUNCTIONFS_BIND` / `EBUSY` 死锁**：Android 14 APEX 的 `/apex/com.android.adbd/bin/adbd` 硬编码了 1 秒等待 `FUNCTIONFS_BIND` 超时（`timed out while waiting for FUNCTIONFS_BIND, trying again`，无属性可关）。拔插或休眠导致 `adbd` 关闭重开 `ep0` 时，若 `g1/UDC` 仍绑定着 `ff100000.dwc3`，`init` 重写 `UDC` 报 `EBUSY` 且 4.9 内核 `f_fs.c` 不再补发 `FUNCTIONFS_BIND`，`adbd` 陷入 1 秒死循环并导致 USB D+ 上拉电阻拉低（电脑完全感知不到设备，还会持续耗电）。
+  3. **`ffs.adb` 实例中毒触发 `-12 ENOMEM`**：一旦卡入该状态，Linux 4.9 的 `ffs.adb` 实例即便走常规 `sys.usb.config none → adb` 也会持续报 `configfs-gadget ff100000.dwc3: failed to start g1: -12 (Out of memory)`，必须彻底卸载 `/dev/usb-ffs/adb`、删建 `/config/usb_gadget/g1/functions/ffs.adb` 并重挂 `functionfs` 才能恢复。
+- **永久自愈模块（[`huawei_usb_adb_fix-v1.2.0.zip`](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.2-camera-usb-fix/huawei_usb_adb_fix-v1.2.0.zip) / [源码](modules/huawei_usb_adb_fix/)）**：
+  - `system.prop` 在启动早期直接将 `persist.sys.usb.config` 覆盖为 `adb`。
+  - `usb_adb_guard.sh` 以 **0% 待机 CPU** 运行事件驱动监听（`logcat -b main -T 1 -v epoch adbd:W '*:S'`），通过 Unix 时间戳过滤历史日志、**检测到 `UDC == configured` 时自动跳过绝不打断正常传输**、直接读取 `/proc/mounts`（规避 `toybox mount` 无参扫描 Magisk 挂载表导致 99% CPU 死循环的巨坑），在检测到真实卡死后自动重建 `ffs.adb` 并恢复原有 USB 模式（`adb` / `mtp,adb` 等）。
+  - **双机实测验证**：荣耀 Play 实测待机 0% CPU 且健康连接下触发注入安全跳过；畅享 9 Plus 在真实爆发 `FUNCTIONFS_BIND`/`EBUSY` 断连现场装入 v1.2.0 后，**零人工干预 12 秒内自动自愈**并被 Windows 自动枚举出 `USB\VID_12D1&PID_103A`。
+
 ---
 
 ## 8. 开机后续事项与救砖回退方案
@@ -292,6 +329,8 @@ cp /dev/block/by-name/recovery_ramdisk ./patched.img
 | 首次开机向导卡在“正在准备我的设备” | 国内无外网导致 Google 联网检查超时 | 离线跳过 Wi-Fi 进桌面，有线 ADB 装代理后再登录 Google |
 | 刷完 `LeaOS 21.0` 滑动掉帧、手感发粘不跟手 | LeaOS `/system/build.prop` 开启了 `hwui.disable_vsync=true`、`use_buffer_age=false`、`egl.profiler=1` 且麒麟 970 CPU/GPU 调频滞后 | 在 Magisk 刷入 `honorplay_smooth-v1.0.0.zip`（切勿关闭华为 HWC 2.2 的 `disable_backpressure=1` 与 `latch_unsignaled=1`） |
 | 若强行设置 `debug.sf.use_phase_offsets_as_durations=1` 导致黑屏循环 | 与本机 `ro.surface_flinger.vsync_event_phase_offset_ns` 冲突触发 `WorkDuration` 断言崩溃 | 严禁在 LeaOS 21.0 上设置 `debug.sf.use_phase_offsets_as_durations=1` |
+| 系统相机黑屏报错、GCam Go 像 PPT 截图极卡（`COR-AL10`） | `libSmartAE.so` `SmartAE::Init +0x77a00` 4 字节堆溢出撞上 Android 14 Scudo 保护页触发 `SIGSEGV`，`CameraDaemon` 每 5 秒崩溃重启 | Magisk 刷入 `honorplay_camera_fix-v1.0.0.zip`（仅限麒麟 970；自动本地关闭 `ippalgoconfig.xml` 内 `SmartAE`） |
+| 有线 USB 调试突然消失（只充电，设备管理器无 `VID_12D1`） | `/vendor/default.prop` 残留 `manufacture,adb` + A14 `adbd` 与 4.9 `f_fs.c` `FUNCTIONFS_BIND` / `EBUSY` / `ffs.adb -12 ENOMEM` 死锁（非电脑驱动冲突） | Magisk 刷入 `huawei_usb_adb_fix-v1.2.0.zip` 实现 0% CPU 永久自愈 |
 
 ---
 
