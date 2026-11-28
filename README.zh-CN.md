@@ -29,6 +29,7 @@
 > - **基础刷机包**：**[Releases (`v1.0-mirror`)](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/tag/v1.0-mirror)**（含 `LeaOS 21.0`、`SHRP charlotte`、USB 驱动与 `SHA256SUMS.txt`）。
 > - **Root / ZRAM / 真墓碑 / 流畅度优化包（仅限荣耀 Play / 麒麟 970）**：**[Releases (`v1.1-optimization`)](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/tag/v1.1-optimization)**（含本机专用 `honorplay_smooth`、`honorplay_zram3g`、`COR-AL10 9.1.0.350` Magisk v30.7 修补镜像，以及 GPLv3/Apache-2.0 开源上游工具镜像）。
 > - **相机 Scudo 闪退修复与有线 USB 调试永久自愈包**：**[Releases (`v1.2-camera-usb-fix`)](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/tag/v1.2-camera-usb-fix)**（含本机专用 `honorplay_camera_fix-v1.0.0.zip` [仅限麒麟 970] + 通用 `huawei_usb_adb_fix-v1.2.0.zip` [EMUI 9.1 麒麟 970/710 通用] 与 `SHA256SUMS.txt`）。
+> - **低延迟相位、4.2 万层挂载炸弹根治与 GMS Doze 进阶包（仅限荣耀 Play / 麒麟 970）**：**[Releases (`v1.3-lowlat-mountfix`)](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/tag/v1.3-lowlat-mountfix)**（含 `honorplay_smooth-v1.1.0.zip` [升级版：新增 `11.5ms` SF 低延迟相位减 `9.5ms` 触控滞后、根治 VNDK 28 `libminijail` 挂载炸弹、关 `traced`/FUSE 转码] + `honorplay_gms_doze-v1.0.0.zip` + `SHA256SUMS.txt`）。
 > - **⚠️ 机型严格隔离提示**：机型专属模块（`honorplay_smooth`、`honorplay_zram3g`、`honorplay_camera_fix`）**仅适用于荣耀 Play（`COR-AL10` / 麒麟 970 / Mali-G72 / 6GB 内存）**，且均在 `customize.sh` 中内置了 `ro.hardware == kirin970` 防刷错校验。仅 `huawei_usb_adb_fix` 为 EMUI 9.1 通用 ConfigFS/FunctionFS 修复模块（已在麒麟 970 与麒麟 710 双机实测通过）。**华为畅享 9 Plus（麒麟 710 / Mali-G51 / 4GB 内存）** 请前往独立仓库 [huawei-enjoy9plus-a14-flash-guide](https://github.com/erha-erha/huawei-enjoy9plus-a14-flash-guide)。
 
 | 用途 | 文件 / 工具 | 实测大小 | 目标分区 / 说明 | 原作者上游与高速镜像 |
@@ -37,7 +38,8 @@
 | 第三方 Recovery（麒麟 970 UFS） | `SHRP-Reborn_v3.2_Stable-Unofficial_charlotte-04.02.26.zip` → `recovery.img` | 压缩包：`45,663,147` B<br>`recovery.img`：`27,068,416` B（~25.8 MiB） | 刷入 `recovery_ramdisk`（内置 Iceows 补丁版 `make_f2fs 1.14.0`） | [@Iceows SourceForge](https://sourceforge.net/projects/altairfr-huawei/files/SHRP-Recovery/SHRP-Reborn_v3.2_Stable-Unofficial_charlotte-04.02.26.zip/download) \| [v1.0 镜像 (zip)](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.0-mirror/SHRP-Reborn_v3.2_Stable-Unofficial_charlotte-04.02.26.zip) \| [预解压 `.img`](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.0-mirror/SHRP-Reborn_v3.2_charlotte-recovery.img) |
 | 内核 | 原厂 `9.1.0.350` `4.9.148` 内核（带 212 字节 SELinux 解锁补丁） | `25,165,824` B（24 MiB） | 保持原样不重刷，无需另行编译 A14 内核 | [@erha-erha/honor-play-emui9.1-350-selinux-kernel](https://github.com/erha-erha/honor-play-emui9.1-350-selinux-kernel) |
 | Magisk Root（EMUI `9.1.0.350`） | `Magisk-v30.7.apk` 与 `COR-AL10_9.1.0.350_recovery_ramdisk_magisk307.img` | APK：`11.6 MB`<br>镜像：`33,554,432` B | 刷入 `recovery_ramdisk`（**仅限 `COR-AL10 9.1.0.350`**，`RECOVERYMODE=true`，`PREINITDEVICE=cache`） | [@topjohnwu/Magisk](https://github.com/topjohnwu/Magisk/releases) \| [v1.1 APK](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.1-optimization/Magisk-v30.7.apk) \| [v1.1 `.img`](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.1-optimization/COR-AL10_9.1.0.350_recovery_ramdisk_magisk307.img) |
-| 60Hz 流畅度模块（麒麟 970 专用） | `honorplay_smooth-v1.0.0.zip`（[源码](modules/honorplay_smooth/)） | `2,568` B | Magisk 内直刷；修复 LeaOS 图形卡顿 + 麒麟 970 CPU/Mali-G72 调优 | [v1.1 下载](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.1-optimization/honorplay_smooth-v1.0.0.zip) |
+| 60Hz 流畅度、低延迟相位与防挂载炸弹（麒麟 970） | `honorplay_smooth-v1.1.0.zip`（[源码](modules/honorplay_smooth/)） | `4,774` B | Magisk 内直刷；HWUI 修复 + **`11.5ms` SF 低延迟相位（每帧减 `9.5ms`）** + **VNDK 28 `libminijail` 挂载炸弹根治** + 麒麟 970 调频 + 关 `dump-logs`/`traced`/FUSE 转码（默认保留窗口模糊） | [v1.3 下载](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.3-lowlat-mountfix/honorplay_smooth-v1.1.0.zip) |
+| GMS Doze 深度休眠模块（可选） | `honorplay_gms_doze-v1.0.0.zip`（[源码](modules/honorplay_gms_doze/)） | `1,556` B | Magisk 内直刷；安装时从本机 `/product/etc/sysconfig/google.xml` 本地生成补丁让 GMS 进入 Doze 休眠（零闭源文件分发，随时可关） | [v1.3 下载](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.3-lowlat-mountfix/honorplay_gms_doze-v1.0.0.zip) |
 | 3 GiB LZ4 ZRAM 模块（6GB 内存） | `honorplay_zram3g-v1.0.0.zip`（[源码](modules/honorplay_zram3g/)） | `1,630` B | Magisk 内直刷；每次带 Root 开机自动挂载 3 GiB LZ4 ZRAM | [v1.1 下载](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.1-optimization/honorplay_zram3g-v1.0.0.zip) |
 | 相机 Scudo 闪退修复（仅限麒麟 970） | `honorplay_camera_fix-v1.0.0.zip`（[源码](modules/honorplay_camera_fix/)） | `2,448` B | Magisk 内直刷；开机自动从本机 `/odm/etc/camera/ippalgoconfig.xml` 生成补丁关闭 `SmartAE` 根治 `libSmartAE.so` 崩溃（零华为闭源文件分发） | [v1.2 下载](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.2-camera-usb-fix/honorplay_camera_fix-v1.0.0.zip) |
 | 有线 USB 调试永久自愈（麒麟 970/710） | `huawei_usb_adb_fix-v1.2.0.zip`（[源码](modules/huawei_usb_adb_fix/)） | `3,811` B | Magisk 内直刷；覆盖 `manufacture,adb` 并以 0% 待机 CPU 事件监听自动自愈 `FUNCTIONFS_BIND` / `EBUSY` / `-12 ENOMEM` 死锁 | [v1.2 下载](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.2-camera-usb-fix/huawei_usb_adb_fix-v1.2.0.zip) |
@@ -302,6 +304,24 @@ cp /dev/block/by-name/recovery_ramdisk ./patched.img
   - `usb_adb_guard.sh` 以 **0% 待机 CPU** 运行事件驱动监听（`logcat -b main -T 1 -v epoch adbd:W '*:S'`），通过 Unix 时间戳过滤历史日志、**检测到 `UDC == configured` 时自动跳过绝不打断正常传输**、直接读取 `/proc/mounts`（规避 `toybox mount` 无参扫描 Magisk 挂载表导致 99% CPU 死循环的巨坑），在检测到真实卡死后自动重建 `ffs.adb` 并恢复原有 USB 模式（`adb` / `mtp,adb` 等）。
   - **双机实测验证**：荣耀 Play 实测待机 0% CPU 且健康连接下触发注入安全跳过；畅享 9 Plus 在真实爆发 `FUNCTIONFS_BIND`/`EBUSY` 断连现场装入 v1.2.0 后，**零人工干预 12 秒内自动自愈**并被 Windows 自动枚举出 `USB\VID_12D1&PID_103A`。
 
+### 7.7 低延迟 VSync 相位（`-9.5 ms`）、`libminijail` 4.2 万层挂载炸弹根治（`-1.63 GB` 内核内存）与 GMS Doze（`v1.3`）
+- **揪出并根治上游 TrebleDroid / LeaOS VNDK 28 隐藏大坑（`libminijail.so` 指数挂载炸弹）**：
+  - **实测根因**：原厂 LeaOS `/system/bin/phh-on-boot.sh` 与 `/system/bin/phh-on-data.sh` 每次开机及软重启（`ctl.restart zygote`）都会无条件叠挂 `libminijail.so`，且把文件自挂到了指向 `/apex/com.android.vndk.v28` 的软链 `/system/lib*/vndk-28/libminijail.so`（与源路径同属共享挂载对等组）。经历 ~10 次软重启后按 `2^N` 指数爆炸（`4,096 / 8,191` 层），导致 `/proc/mounts` 膨胀至 **`42,312` 条**、白吃约 **`1.63 GB` 内核内存**，且每次挂载变动都触发 PID 1 `init` 持续飙至 **`96.6%` CPU**！
+  - **永久修复（已内置于 [`honorplay_smooth-v1.1.0.zip`](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.3-lowlat-mountfix/honorplay_smooth-v1.1.0.zip)）**：通过 Magisk 覆盖修复版 `phh-on-boot.sh` 与 `phh-on-data.sh`（严格保留 `u:object_r:phhsu_exec:s0` 标签），移除自挂语句并加 `grep -q " $2 " /proc/mounts` 幂等判断。冷启动实测：`/proc/mounts` 从 **`42,312` 骤降至 `1,360` 条（`libminijail` 从 `40,956` 降至 `3`）**、内核内存从 **`2,101 MB` 降至 `470 MB`（立省 `1.63 GB`）**、`init` 回归 **`0%`**。
+- **压低滑屏触控到上屏延迟（`-9.5 ms/帧`）**：
+  - 实测桌面左右滑屏逐帧 `framestats` 发现：应用绘制仅 `6.4 ms`，但 `DisplayPresentTime` 上屏却滞后 **`48–64.6 ms`（3–4 帧）**，原因是未配相位偏移导致 SurfaceFlinger 落入 `app=2ms / SF=2ms` 默认档（`SF duration = 14.67 ms`，整条管线 `31.34 ms`）。
+  - 实机反推出本机 `SurfaceFlinger` 无跨帧回绕条件（必须满足 `sf_phase >= app_phase`，否则回绕反而多加一帧），现调校为 **`app=11.5ms / SF=11.5ms`（GL 合成档 `10.0ms / 10.0ms`）**：`SF duration` 从 `14.67 ms` 降至 **`5.17 ms`**（GL `6.67 ms`），整条管线从 **`31.34 ms` 降至 `21.84 ms`（每帧净减 `9.5 ms`）**，同时完整保留 `16.67 ms` 应用绘制预算及原厂 `/vendor/build.prop` 必需的 `debug.sf.latch_unsignaled=1`。
+- **GMS Doze、去追踪/转码与 ART 预编译（兼避坑）**：
+  - [`honorplay_gms_doze-v1.0.0.zip`](https://github.com/erha-erha/honor-play-a14-flash-guide/releases/download/v1.3-lowlat-mountfix/honorplay_gms_doze-v1.0.0.zip)（[源码](modules/honorplay_gms_doze/)）：安装时本地复制并注释本机 `/product/etc/sysconfig/google.xml` 中的 `com.google.android.gms` 省电白名单（零闭源文件分发），开机由 Magisk 自动挂载让 GMS 进入 Doze 休眠。
+  - `honorplay_smooth-v1.1.0.zip` 同时关停后台 Perfetto 追踪（`persist.traced.enable=0`）与 FUSE 媒体软件转码（`persist.sys.fuse.transcode_enabled=false`），默认**保留毛玻璃窗口模糊**；⚠️ **切勿设置全局 `persist.log.tag=E`**（会屏蔽 `adbd:W` 导致 `huawei_usb_adb_fix` 自愈失明），且原厂 `4.9.148` 内核无 `/proc/pressure`（`CONFIG_PSI`），各种 PSI 类 LMKD 参数均无效。
+  - 推荐刷机后执行一次 ART 分层编译与 UFS 2.1 块回收（`COR-AL10` 为 128GB 存储余量充足）：
+    ```sh
+    adb shell pm trim-caches 4096G && adb shell pm art cleanup
+    adb shell cmd package compile -m speed-profile -a
+    adb shell cmd package compile -m speed -f com.android.settings
+    adb shell sm fstrim
+    ```
+
 ---
 
 ## 8. 开机后续事项与救砖回退方案
@@ -330,7 +350,9 @@ cp /dev/block/by-name/recovery_ramdisk ./patched.img
 | 刷完 `LeaOS 21.0` 滑动掉帧、手感发粘不跟手 | LeaOS `/system/build.prop` 开启了 `hwui.disable_vsync=true`、`use_buffer_age=false`、`egl.profiler=1` 且麒麟 970 CPU/GPU 调频滞后 | 在 Magisk 刷入 `honorplay_smooth-v1.0.0.zip`（切勿关闭华为 HWC 2.2 的 `disable_backpressure=1` 与 `latch_unsignaled=1`） |
 | 若强行设置 `debug.sf.use_phase_offsets_as_durations=1` 导致黑屏循环 | 与本机 `ro.surface_flinger.vsync_event_phase_offset_ns` 冲突触发 `WorkDuration` 断言崩溃 | 严禁在 LeaOS 21.0 上设置 `debug.sf.use_phase_offsets_as_durations=1` |
 | 系统相机黑屏报错、GCam Go 像 PPT 截图极卡（`COR-AL10`） | `libSmartAE.so` `SmartAE::Init +0x77a00` 4 字节堆溢出撞上 Android 14 Scudo 保护页触发 `SIGSEGV`，`CameraDaemon` 每 5 秒崩溃重启 | Magisk 刷入 `honorplay_camera_fix-v1.0.0.zip`（仅限麒麟 970；自动本地关闭 `ippalgoconfig.xml` 内 `SmartAE`） |
-| 有线 USB 调试突然消失（只充电，设备管理器无 `VID_12D1`） | `/vendor/default.prop` 残留 `manufacture,adb` + A14 `adbd` 与 4.9 `f_fs.c` `FUNCTIONFS_BIND` / `EBUSY` / `ffs.adb -12 ENOMEM` 死锁（非电脑驱动冲突） | Magisk 刷入 `huawei_usb_adb_fix-v1.2.0.zip` 实现 0% CPU 永久自愈 |
+| 有线 USB 调试突然消失（只充电，设备管理器无 `VID_12D1`） | `/vendor/default.prop` 残留 `manufacture,adb` + A14 `adbd` 与 4.9 `f_fs.c` `FUNCTIONFS_BIND` / `EBUSY` / `ffs.adb -12 ENOMEM` 死锁（非电脑驱动冲突） | Magisk 刷入 `huawei_usb_adb_fix-v1.2.0.zip` 实现 0% CPU 永久自愈（切勿设全局 `persist.log.tag=E`） |
+| 多次软重启后 PID 1 `init` 吃满 `96%` CPU、`/proc/mounts` 破 4 万条 | 上游 `phh-on-boot.sh`/`phh-on-data.sh` 无幂等判断叠挂 `libminijail.so` 引发 `2^N` 挂载爆炸（泄漏 ~1.6GB 内核内存） | 刷入 `honorplay_smooth-v1.1.0.zip` 后冷重启一次即可彻底清零并根治 |
+| 60 FPS 下左右滑屏仍感发粘不跟手 | 默认 SF 相位（`app=2ms/SF=2ms`）管线达 `31.34 ms`（实测上屏滞后 `48–64 ms`） | 刷入 `honorplay_smooth-v1.1.0.zip`（`11.5ms/11.5ms` 无回绕低延迟相位每帧净砍 `9.5 ms`） |
 
 ---
 

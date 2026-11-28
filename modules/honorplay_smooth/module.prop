@@ -1,6 +1,6 @@
 id=honorplay_smooth
-name=Honor Play (Kirin 970) Smooth & Low-Latency Tweaks
-version=1.0.0
-versionCode=100
+name=Honor Play (Kirin 970) 60Hz Smooth & Low-Latency Tweaks
+version=1.1.0
+versionCode=110
 author=erha-erha
-description=Fix LeaOS 21.0 VSync/buffer-age/profiler lag while keeping Huawei EMUI 9.1 HWC 2.2 fence compatibility, optimize Kirin 970 interactive governor & Mali-G72 415MHz wake floor, disable window blurs, and stop runaway dump-logs.
+description=Kirin 970 + Mali-G72 MP12 low-latency tuning, LeaOS HWUI/VSync & 11.5ms SF phase fix (-9.5ms touch lag), fixes VNDK 28 libminijail.so 2^N mount bomb, 0.5x animations (keeps window blurs), disables dump-logs/traced/FUSE transcode.

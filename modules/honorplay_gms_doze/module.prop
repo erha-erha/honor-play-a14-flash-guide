@@ -1,0 +1,6 @@
+id=honorplay_gms_doze
+name=Honor Play GMS Doze Optimization
+version=1.0.0
+versionCode=100
+author=erha-erha
+description=Generates a local patched /product/etc/sysconfig/google.xml during install (commenting out allow-in-power-save for com.google.android.gms) so GMS enters Android Doze idle cleanly. Zero proprietary files redistributed.

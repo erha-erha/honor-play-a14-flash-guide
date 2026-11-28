@@ -7,3 +7,16 @@ debug.hwui.use_buffer_age=true
 debug.sf.disable_backpressure=1
 debug.sf.enable_gl_backpressure=0
 debug.sf.latch_unsignaled=1
+# Low-latency 60Hz SurfaceFlinger VSync phase offsets (non-wrapping sf_phase >= app_phase):
+# Cuts total pipeline from 31.34ms -> 21.84ms (-9.5ms every frame) while keeping full 16.67ms app budget.
+# NOTE: Do NOT set debug.sf.use_phase_offsets_as_durations=1 (asserts/crashes on LeaOS 21.0)
+ro.surface_flinger.vsync_event_phase_offset_ns=11500000
+ro.surface_flinger.vsync_sf_event_phase_offset_ns=11500000
+debug.sf.early_app_phase_offset_ns=11500000
+debug.sf.early_phase_offset_ns=11500000
+debug.sf.early_gl_app_phase_offset_ns=10000000
+debug.sf.early_gl_phase_offset_ns=10000000
+# Disable background Perfetto tracing daemons (traced / traced_probes)
+persist.traced.enable=0
+# Disable Android FUSE software media transcoding on Kirin 970
+persist.sys.fuse.transcode_enabled=false
